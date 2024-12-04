@@ -512,7 +512,7 @@ fig1D <-
 ggarrange(fig1A, fig1B, fig1C, fig1D,
           nrow = 2, ncol = 2, align = "v", labels = c("(a)", "(b)", "(c)", "(d)"))
 
-#ggsave("Fig1_R1.pdf", height = 8.5, width = 10)
+ggsave("figures/Fig1_TDTexample.pdf", height = 8.5, width = 10)
 
 ```
 
@@ -682,14 +682,12 @@ ggplot(dldatKL, aes(y = kdot_value, x = time, colour = kdot)) +
 # Plot four weeks of body temperature
 tb_plot <- 
 ggplot(data.frame(dl0), aes(y = ta, x = time)) +
-  geom_hline(yintercept = 28.5, colour = "black", lty = 2) + 
   geom_vline(xintercept = 6350, colour = "red", lty = 2) + 
   geom_vline(xintercept = 30870, colour = "red", lty = 2) + 
   geom_vline(xintercept = 36550, colour = "red", lty = 2) + 
   geom_line() +
   labs(x = "Time (days)", y = bquote(Temperature~(degree*C))) +
   scale_y_continuous(limits = c(3,40)) +
-  annotate("text", x = 12000, y = 38, label = bquote(italic(T)[c]=="28.5°C"), hjust = 0) +
   theme_classic() +
   theme(axis.text.x = element_blank(), axis.ticks.x = element_blank())
 
@@ -725,7 +723,7 @@ ggarrange(base_tls_plot, damage_plot, repair_plot,
           align = "hv", ncol = 3, nrow = 3,
           common.legend = TRUE, legend = "bottom")
 
-#ggsave("Fig2_R1.pdf", width = 10, height = 10)
+ggsave("figures/Fig2_damagerepair.pdf", width = 10, height = 10)
 
 ```
 
@@ -771,7 +769,7 @@ fig3a <- ggplot(env, aes(x = date)) +
   theme_classic()
 
 fig3a
-#ggsave("Fig3a_R1.pdf", height = 5, width = 5)
+ggsave("figures/Fig3a.pdf", height = 5, width = 5)
 
 fig3b <- 
 ggplot(die, aes(x = Date, y = Survival_percent, colour = Species_Code)) + 
@@ -793,7 +791,7 @@ ggplot(die, aes(x = Date, y = Survival_percent, colour = Species_Code)) +
   theme(legend.position = "none")
 
 fig3b
-#ggsave("Fig3b_R1.pdf", height = 5, width = 5)
+ggsave("figures/Fig3b.pdf", height = 5, width = 5)
 
 ```
 
@@ -832,7 +830,7 @@ ggplot(demodat4, aes(x = time3, y = value, colour = stage, lty = treatment)) +
   guides(colour = guide_legend(nrow = 2, byrow = TRUE), linetype = guide_legend(nrow = 2, byrow = TRUE))
 
 fig3d
-#ggsave("Fig3d_R1.pdf", width = 5, height = 5)
+ggsave("figures/Fig3d.pdf", width = 5, height = 5)
 
 
 ```
@@ -885,7 +883,7 @@ ggplot(data = simdataA, aes(x = simTime, y = value, colour = sim_type)) +
   guides(colour = guide_legend(nrow = 2, byrow = TRUE), linetype = guide_legend(nrow = 2, byrow = TRUE))
 
 fig3e
-#ggsave("Fig3e_R1.pdf", height = 5, width = 5)
+ggsave("figures/Fig3e.pdf", height = 5, width = 5)
 
 
 fig3f <-
@@ -908,7 +906,7 @@ ggplot(data = simdataB, aes(x = simTime, y = value, colour = sim_type)) +
 
 fig3f
 
-#ggsave("Fig3f_R1.pdf", height = 5, width = 5)
+ggsave("figures/Fig3f.pdf", height = 5, width = 5)
 
 ```
 
@@ -1269,6 +1267,7 @@ ozmap(x = "country", add = TRUE)
 legend(x = 124, y = -32, legend = paste(seq(5, 25, 5), "%"), pt.cex = seq(5, 25, 3)/15, pch = 16, col = cbp2[8], bty = 'n')
 
 # Save figure as approximately 8 x 8 inch
+
 
 ```
 
