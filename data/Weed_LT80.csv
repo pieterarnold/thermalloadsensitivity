@@ -1,0 +1,11 @@
+id,time_h,time_min,mortality_percent,Species,Species2,temp_treatment,source,source_figure
+LT80,3.529411765,211.7647059,80,london_rocket,London rocket,50,Dahlquist et al. 2007,3
+LT80,19.01960784,1141.176471,80,london_rocket,London rocket,46,Dahlquist et al. 2007,3
+LT80,71.76470588,4305.882353,80,london_rocket,London rocket,42,Dahlquist et al. 2007,3
+LT80,0.869565217,52.17391304,80,black_nightshade,Black nightshade,60,Dahlquist et al. 2007,4
+LT80,59.13043478,3547.826087,80,black_nightshade,Black nightshade,50,Dahlquist et al. 2007,4
+LT80,185.2173913,11113.04348,80,black_nightshade,Black nightshade,46,Dahlquist et al. 2007,4
+LT80,321.7391304,19304.34783,80,black_nightshade,Black nightshade,42,Dahlquist et al. 2007,4
+LT80,0.69124424,41.4746544,80,tumble_pigweed,Tumble pigweed,60,Dahlquist et al. 2007,6
+LT80,95.3917,5723.502,80,tumble_pigweed,Tumble pigweed,50,Dahlquist et al. 2007,6
+LT80,253.6866,15221.196,80,tumble_pigweed,Tumble pigweed,46,Dahlquist et al. 2007,6
