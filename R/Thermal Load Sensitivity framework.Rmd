@@ -1,0 +1,2477 @@
+---
+title: "Thermal Load Sensitivity Framework"
+authors: "Pieter Arnold, Daniel Noble, Michael Kearney, Enrico Rezende"
+date: "`r Sys.Date()`"
+format:
+  html:
+    toc: true
+    toc-location: left
+    toc-depth: 3
+    toc-title: "**Table of Contents**"
+    output-file: "index.html"
+    theme: cosmo
+    embed-resources: true
+    code-fold: show
+    code-tools: true
+    number-sections: true
+    fontsize: "12"
+    max-width: "10"
+    code-overflow: wrap
+crossref: 
+  fig-title: Figure     # (default is "Figure")
+  tbl-title: Table     # (default is "Table")
+  title-delim: —     # (default is ":")
+  fig-prefix: Fig.   # (default is "Figure")
+  tbl-prefix: Tab.    # (default is "Table")
+editor_options: 
+  chunk_output_type: console
+---
+
+This is the extended online supplementary material for the manuscript:
+
+Arnold *et al.* 2025. **A framework for modelling thermal load sensitivity across life**. *Global Change Biology*, under review.
+
+Please get in touch with Pieter Arnold (pieter.arnold@anu.edu.au) if you have any questions about the code or the models.
+
+Note: References to figures by numbers refer directly to the manuscript and supporting material documents. 
+
+# **Introduction**
+
+In this supplementary material, we provide with code of case studies and simulations that we draw upon within our manuscript to demonstrate how the thermal load sensitivity (TLS) framework approach can be can be implemented in practice. We provide the code for the models we use in our case studies, and the code for the simulations we run to predict the impact of heatwaves on the processes of damage and repair feedback. Models and code will of course always need to be modified to suite the specific system in question and should be validated against empirical data. We view this tutorial and all models as a starting point for better understanding the impacts of thermal stress on individuals and populations.
+
+
+# **Load packages**
+Our case studies all use the statistical software [R](https://www.r-project.org/). The code below loads the required packages that are needed for this tutorial.
+
+```{r, libraries}
+#| label: libraries
+#| echo: true
+#| warning: false
+#| message: false
+
+# Load required libraries after the installation
+pacman::p_load(metaDigitise, tidyverse, ggpubr, raster, ncdf4, ozmaps, scales, magick, here, quantreg, zoo)
+
+```
+
+
+# **Load functions**
+
+We need to define several functions for thermal tolerance landscape models and accumulated damage models. These can be added to your working environment by running the code below.
+
+
+```{r, functions}
+#| label: functions
+#| echo: true
+#| warning: false
+#| message: false
+#| eval: true
+
+
+###
+# Find the intercept from a GLM
+findInt <- function(model, value) {
+  function(x) {
+    predict(model, data.frame(log10timeh = x), type = "response") - value
+  }
+}
+###
+
+###
+# Calculate the accumulated damage based on time in minutes
+# Function Source: Faber, Ørsted, Ehlers (2024) https://doi.org/10.1093/jxb/erae096 
+Acc_function = function(x, y, intercept, slope) {
+  output = data.frame(z = NA, cumsum = NA)
+  last_row = nrow(data.frame(x = x, y = y))
+  x = c(x, x[last_row])
+  y = c(y, y[last_row])
+  for (i in 1:length(x) - 1) {
+    #print(paste0("round nr. ", i))
+    acc = max(0, min(100, (100 * (x[i + 1] - x[i])) / (10^(slope * max(y[i + 1], y[i]) + intercept))))
+    output[i, 1] = acc
+  }
+  output$cumsum = cumsum(output$z)
+  z = output$cumsum
+  z = append(z, 0)
+  z[z > 100] = 100 # Set values exceeding 100% to 100%
+  z = z[-length(z)]
+  return(z)
+}
+###
+
+###
+# Repair function ArrFunc5 by Michael Kearney
+ArrFunc5 <- function(x,TA,TAL,TAH,TL,TH,TREF,kdot_ref) {
+  exp(TA * (1/TREF-1/(273.15+x)))/(1+exp(TAL * (1/(273.15+x)-1/TL)) + exp(TAH * (1/TH-1/(273.15+x)))) * kdot_ref
+}
+###
+
+
+###
+# Function to estimate thermal tolerance landscape from static assays
+# General procedure
+# Step 1: Calculate CTmax and z from TDT curve
+# Step 2: Calculate average log10 time and Ta (mean x and y for interpolation purposes)
+# Step 3: Interpolating survival probabilities to make them comparable across treatments 
+# Step 4: Overlap all survival curves into a single one by shifting each curve to mean x and y employing z
+# Step 5: Build expected survival curve with mean x and y pooling all data
+# Step 6: Expand expected curve to multiple Ta (with 0.1ºC difference for predictive purposes)
+###
+
+tolerance.landscape <- function(ta,time){
+  
+  data <- data.frame(ta,time)
+  data <- data[order(data$ta,data$time),]
+  
+  # Step 1: Calculate CTmax and z from TDT curve
+  ta <- as.numeric(levels(as.factor(data$ta)))			
+  model <- lm(log10(data$time) ~ data$ta); summary(model)
+  ctmax <- -coef(model)[1]/coef(model)[2]
+  z <- -1/coef(model)[2]
+  
+  # Step 2: Calculate average log10 time and Ta (mean x and y for interpolation purposes)
+  time.mn <- mean(log10(data$time))
+  ta.mn <- mean(data$ta)
+  
+  # Step 3: Interpolating survival probabilities to make them comparable across treatments 
+  time.interpol <- matrix(NA,1001,length(ta))
+  for(i in 1:length(ta)){	
+    time <- c(0,sort(data$time[data$ta==ta[i]]))
+    p <- seq(0,100,length.out = length(time))
+    interp <- approx(p,time,n = 1001)
+    time.interpol[,i] <- interp$y
+  }			
+  
+  # Step 4: Overlap all survival curves into a single one by shifting each curve to mean x and y employing z
+  # Step 5: Build expected survival curve with median survival time for each survival probability
+  shift <- (10^((ta - ta.mn)/z))
+  time.interpol.shift <- t(t(time.interpol)*shift)[-1,]
+  surv.pred <- 10^apply(log10(time.interpol.shift),1,median) 	
+  
+  # Step 6: Expand predicted survival curves to measured Ta (matrix m arranged from lower to higher ta)
+  # Step 7: Obtain predicted values comparable to each empirical measurement
+  m <- surv.pred*matrix ((10^((ta.mn - rep(ta, each = 1000))/z)), nrow = 1000)
+  out <-0
+  for(i in 1:length(ta)){
+    time <- c(0,data$time[data$ta==ta[i]])
+    p <- seq(0,100,length.out = length(time))
+    out <- c(out,approx(seq(0,100,length.out = 1000),m[,i],xout=p[-1])$y)
+  }
+  data$time.pred <- out[-1]
+  colnames(m) <- paste("time.at",ta,sep=".")
+  m <- cbind(surv.prob=seq(1,0.001,-0.001),m)
+  
+  par(mfrow=c(1,2),mar=c(4.5,4,1,1),cex.axis=1.1)
+  plot(-10,-10,las=1,xlab="Time (min)",ylab="Survival (%)",col="white",xaxs="i",yaxs="i",xlim=c(0,max(data$time)*1.05),ylim=c(0,105))
+  for(i in 1:length(ta)){
+    time <- c(0,sort(data$time[data$ta==ta[i]])); p <- seq(100,0,length.out = length(time))
+    points(time,p,pch=21,bg="black",cex=0.5)
+    time <- c(0,sort(data$time.pred[data$ta==ta[i]]))
+    points(m[,i+1],100*m[,1],type="l",lty=2)}
+  segments(max(data$time)*0.7,90,max(data$time)*0.8,90,lty=2)
+  text(max(data$time)*0.82,90,"fitted",adj=c(0,0.5))
+  plot(log10(data$time.pred),log10(data$time),pch=21,bg="black",cex=0.5,lwd=0.7,las=1,xlab="Fitted Log10 time",ylab="Measured Log10 time")
+  abline(0,1,lty=2)
+  rsq <- round(summary(lm(log10(data$time) ~ log10(data$time.pred)))$r.square,3)
+  text(min(log10(data$time.pred)),max(log10(data$time)),substitute("r"^2*" = "*rsq),adj=c(0,1))
+  list(ctmax = as.numeric(ctmax), z = as.numeric(z), ta.mn = ta.mn,  S = data.frame(surv=seq(0.999,0,-0.001),time=surv.pred),
+       time.obs.pred=cbind(data$time,data$time.pred), rsq = rsq)
+}					
+
+
+### Function to estimate thermal tolerance landscape from dynamic assays
+# Add in a repair and repair-decay feedback function within it 
+# By Enrico Rezende, with modifications by Michael Kearney, Pieter Arnold
+###
+
+dynamic.landscape2 <-
+  function(ta,tolerance.landscape,Tbs, TA, TAL, TAH, TL, TH, TREF, kdot_ref, kdot_decline){
+  
+  ArrFunc5 <- function(x,TA,TAL,TAH,TL,TH,TREF,kdot_ref){
+    exp(TA*(1/TREF-1/(273.15+x)))/(1+exp(TAL*(1/(273.15+x)-1/TL))+exp(TAH*(1/TH-1/(273.15+x))))*kdot_ref
+  }
+  
+  TA <- 1000
+  TL <- 8.5 + 273.15
+  TH <- 25.5 + 273.15
+  TAL <- 100000
+  TAH <- 100000
+  TREF <- 20 + 273.15
+  
+  Tbs <- seq(0, 50)
+  TempCorr <- ArrFunc5(Tbs, TA, TAL, TAH, TL, TH, TREF, 0.001)
+  
+  surv <- tolerance.landscape$S[,2] + seq(0,0.0000001,length.out=1000)
+  ta.mn <- tolerance.landscape$ta.mn
+  z <- tolerance.landscape$z
+  shift <- 10^((ta.mn - ta)/z)	
+  time.rel <- 0
+  alive <- 100
+  survival <- matrix(NA, length(ta))
+  kdot <- matrix(NA, length(ta))
+  repair <- ArrFunc5(ta, TA, TAL, TAH, TL, TH, TREF, kdot_ref)
+  for(i in 1:length(ta)){			
+    if(!is.na(alive)) {
+      alive <- try(approx(c(0,shift[i]*surv),seq(100,0,length.out = length(c(0,surv))),
+                          xout = time.rel[i] + 1)$y,silent=TRUE)	
+      # modify kdot_ref based on alive. If alive > 99, kdot_ref stays the same. If alive < 99, kdot_ref reduces as a function of alive
+      kdot_ref1 <- ifelse(!is.na(alive) && alive < 99, kdot_ref*(kdot_ref^(kdot_decline/(alive))), kdot_ref)
+      alive <- alive + ArrFunc5(ta[i], TA, TAL, TAH, TL, TH, TREF, kdot_ref1)
+      alive <- ifelse(is.na(alive),0,alive) ##
+      alive <- ifelse(alive > 100,100,alive)
+      survival[i] <- alive
+      kdot[i] <- kdot_ref1
+      time.rel <- try(c(time.rel,approx(seq(100,0,length.out = length(c(0,surv))),c(0,shift[i + 1]*surv),
+                                        xout = alive)$y),silent=TRUE)}
+    else{
+      alive <- 100
+      survival[i] <- 0
+      kdot[i] <- kdot_ref }}				
+  out <- data.frame(cbind(ta=ta[1:(length(survival)-1)],time=(1:length(ta))[1:(length(survival)-1)],
+                          alive=survival[1:(length(survival)-1)],kdot=kdot[1:(length(survival)-1)]))
+  par(mar=c(4,4,1,1),mfrow=c(1,2))
+  plot(1:length(ta),ta,type="l",xlim=c(0,length(ta)),ylim=c(min(ta),max(ta)),col="black",lwd=1.5,las=1,
+       xlab = "Time (min)", ylab = "Temperature (ºC)")			
+  plot(out$time,out$alive,type="l",xlim=c(0,length(ta)),ylim=c(0,100),col="black",lwd=1.5,las=1,
+       xlab = "Time (min)", ylab = "Survival (%)")
+  list(time = out$time,ta = out$ta, survival = out$alive, kdot = out$kdot)}
+###
+
+
+
+###
+# Function to extract data from netcdf files by Michael Kearney
+
+extract.nc <- function(file, loc){
+  nc <- nc_open(file)
+  lon <- ncvar_get(nc, "longitude") # extract longitude values
+  lat <- ncvar_get(nc, "latitude") # extract latitude values
+  # find closest pixel to site requested
+  flat <- match(abs(lat-loc[2])<.3,1)
+  latindex <- which(flat %in% 1)
+  flon <- match(abs(lon-loc[1])<.3,1)
+  lonindex <- which(flon %in% 1)
+  start <- c(1,latindex,lonindex) # start location in file for extraction
+  count <- c(-1, 1, 1) # extract all data (-1)
+  data <- as.numeric(ncvar_get(nc, varid = attributes(nc$var)$names, start = start, count)) # get the data
+  # extract dates
+  dates <- as.POSIXct(ncvar_get(nc, "time"), tz = "Etc/GMT+10", origin = "1970-01-01")
+  nc_close(nc)
+  result <- cbind(dates, as.data.frame(data)) # final output
+}
+###
+
+set.seed(21)
+
+# Colourblind friendly colour palette
+cbp2 <- c("#000000", "#E69F00", "#56B4E9", "#009E73",
+          "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+
+# Continuous ramp colour palette
+colfunc <- colorRampPalette(c("palegreen","tan4"))
+
+```
+
+# **Thermal Load Sensitivity framework**
+
+The Thermal Load Sensitivity (TLS) framework builds on the Thermal Death Time (TDT) model. The TDT explicitly models how both exposure time and exposure temperature affect lethal limits (e.g., $LT_{50}$ – the lethal temperature limit when 50% mortality occurs), which captures such relationships as: 
+
+$$
+T = CT_{max1h} - z ~\cdot~ log_{10}(t)
+$$
+
+where, *T* = temperature for, say, 50% mortality ($LT_{50}$), $CT_{max1h}$ is the critical thermal maximum (°C), $z$ = thermal sensitivity and *t* = time (in hours) before reaching the 50% damage threshold. Note that because $log_{10}(1) = 0$, the intercept of Equation 1, $CT_{max1h}$, corresponds to the lethal temperature for 1 h of exposure. While we standardise CTmax to 1 h, time can be scaled to other units (e.g., minutes) depending on what is biologically relevant to the organism’s ecology. Given that survival follows a typical dose-response curve, logarithmic transformation makes the relationship between lethal temperature and time approximately linear (Rezende *et al.,* 2014). 
+
+Alternatively, we can flip the axes to account for the fact that temperature is the main factor manipulated in experiments allowing one to re-parametrise the TDT curve as follows:
+
+$$
+log_{10}(t) = \alpha + \beta ~\cdot~ T
+$$
+In the above equation, time to reach 50% mortality, *t*, is on the *y*-axis and temperature, *T*, on the *x*-axis. We can recover $CT_{max1h}$ and $z$ by back-transformation using the new slope (β) and intercept (α) from this relationship as follows: $CT_{max1h}=-\frac{\alpha}{\beta}$ and $z=-\frac{1}{\beta}$. The parameterisation of the TDT curve as in Equation 2 is useful because it allows one to capture how damage accumulates over time as follows (see Jørgensen *et al.,* 2021; Ørsted *et al.,* 2024):
+
+$$
+Accumulated ~ damage = \sum ^{T_e>T_c}_{i=1} \frac{100 ~\cdot~ (t_{i+1}-t_i)}{10^{(\beta ~\cdot~ max(T_i;~T_{i+1})+\alpha)}}
+$$
+
+where the equation calculates the accumulated damage (as a %) from time, $t_i$ to time $t_{i+1}$, using the parameters from the TDT curve (Equation 2). The accumulated damage function assumes overheating risk and injury occurrence when $T_e$ (the exposure temperature) exceeds $T_c$ (the assumed critical temperature above which heat injury accumulates) (Ørsted *et al.*, 2024). When the accumulated damage reaches 100%, the lethal limit (that is, the defined threshold; $LT_{50}$ in this example) has been reached.
+
+To illustrate how the feedback processes of damage and repair could play out theoretically, we simulated the effects of temperature on physiological function while altering repair rates and their dependence on physiological function.
+
+We estimated the thermal sensitivity of a hypothetical ectotherm (Fig. 1a), then simulated damage rate increasing rapidly with temperature (Fig. 1b). We applied the Sharpe-Schoolfield Arrhenius model as in Box 1 to simulate repair rates based on a repair rate coefficient $\dot{k}$ to set the rate of repair at 20˚C Fig. 1c). 
+
+Potential repair rate (Fig. 1c) was modelled using a typical four-parameter Sharpe-Schoolfield Arrhenius model (Schoolfield *et al.,* 1981) with an additional repair rate parameter, in the form of:
+
+$$
+y(T) = \dot{k}_{ref} ~\cdot~ exp(\frac{T_A}{T_{ref}}-\frac{T_A}{T}) ~\cdot~ \frac{1+exp(\frac{T_{AL}}{T_{ref}} - \frac{T_{AL}}{T_{ref}})+exp(\frac{T_{AH}}{T_H} - \frac{T_{AH}}{T_{ref}})}{1+exp(\frac{T_{AL}}{T} - \frac{T_{AL}}{T_{L}})+exp(\frac{T_{AH}}{T_H} - \frac{T_{AH}}{T_H})}
+$$
+
+
+
+```{r TLS Damage and repair simulation 1, warning=FALSE}
+#| label: TLS Damage and repair simulation 1
+#| echo: true
+#| eval: true
+ 
+# Generic ectotherm damage and repair simulation 
+set.seed(21)
+
+# Set Arrhenius model and repair rate parameters		
+TA <- 14065 # Arrhenius temperature, K
+TL <- 10.5 + 273.15 # Arrhenius temperature lower threshold, K
+TH <- 28.5 + 273.15 # Arrhenius temperature upper threshold, K
+TAL <- 50000 # Arrhenius temperature lower, K
+TAH <- 100000 # Arrhenius temperature upper, K
+TREF <- 20 + 273.15 # reference temperature, K
+Tbs <- seq(0, 50) # sequence of temperatures over which to model, deg C
+kdot_ref <- 0.02 # repair rate % per minute at ref temp 20 deg C
+
+# Load ectotherm model data and subset to example four week period
+par(mfrow = c(1,1))
+ta <- read.csv("ectotherm.csv")[3006 + 1:(24*28),] # subset ectotherm - derived from NicheMapR
+ta <- ta$TC + 0.3 # Body temperature simulation
+#plot(ta, type = "l")
+time.min <- spline(ta, n = length(ta-1)*60)$x	
+ta.min <- spline(ta,n = length(ta-1)*60)$y	
+ta <- ta.min
+ind <- 1000
+ctmax <- 43.8 # CTmax1h
+z <-  -2.4 # z (slope)
+
+# Simulate dataset for tolerance landscape based on CTmax and z
+static <- rep(c(round(ctmax,2),round(ctmax+z,2), round(ctmax+z*2,2)), each = ind)
+time <- abs(c(rnorm(ind,1,1/4), rnorm(ind,10,10/4), rnorm(ind,100,100/4)))	
+tl <- tolerance.landscape(static, time)
+#tl$S$time
+# Fit modified dynamic.landscape function that includes the Arrhenius repair function
+
+# Set repair coefficients
+kdot0 <- 0 # none
+kdot1 <- 0.007 # low
+kdot2 <- 0.0111 # moderate
+kdot3 <- 0.02 # high
+
+TA <- 14065 # Arrhenius temperature, K
+TL <- 10.5 + 273.15 # Arrhenius temperature lower threshold, K
+TH <- 28.5 + 273.15 # Arrhenius temperature upper threshold, K
+TAL <- 50000 # Arrhenius temperature lower, K
+TAH <- 100000 # Arrhenius temperature upper, K
+TREF <- 20 + 273.15 # reference temperature, K
+Tbs <- seq(0, 50) # sequence of temperatures over which to model, deg C
+kdot_ref <- 0.02 # repair rate % per minute at ref temp 20 deg C
+
+# No repair
+dl0 <- dynamic.landscape2(ta,tl,TA,TL,TH,TAL,TAH,TREF,Tbs,kdot_ref = kdot0, kdot_decline = 3)
+# Three levels of repair rates
+dl1 <- dynamic.landscape2(ta,tl,TA,TL,TH,TAL,TAH,TREF,Tbs,kdot_ref = kdot1, kdot_decline = 3)
+dl2 <- dynamic.landscape2(ta,tl,TA,TL,TH,TAL,TAH,TREF,Tbs,kdot_ref = kdot2, kdot_decline = 3)
+dl3 <- dynamic.landscape2(ta,tl,TA,TL,TH,TAL,TAH,TREF,Tbs,kdot_ref = kdot3, kdot_decline = 3)
+
+# Temperature-time model sequence
+time2 <- log10(seq(1,1000,1))
+ht <- 43.8 + (-2.4*time2)
+sim <- data.frame(cbind(time2,ht))
+Tbs <- seq(5, 45, 0.04001)
+
+# Generate Arrhenius functions for repair rates
+TempCorr0 <- ArrFunc5(Tbs, TA, TAL, TAH, TL, TH, TREF, kdot0)
+TempCorr1 <- ArrFunc5(Tbs, TA, TAL, TAH, TL, TH, TREF, kdot1)
+TempCorr2 <- ArrFunc5(Tbs, TA, TAL, TAH, TL, TH, TREF, kdot2)
+TempCorr3 <- ArrFunc5(Tbs, TA, TAL, TAH, TL, TH, TREF, kdot3)
+
+# Accumulated damage function, then convert to a damage rate per minute
+damage <- NULL
+damageacc <- Acc_function(x = 10^time2, y = Tbs, intercept = -(ctmax/z), slope = (1/z))
+for (i in 1:length(damageacc)) { damage[i] <- damageacc[i+1] - damageacc[i] }
+damage[which.max(damage):1000] <- NA # cap damage rate beyond accumulated maximum
+
+TempCorrDat <- data.frame(cbind(Tbs, TempCorr0, TempCorr1, TempCorr2, TempCorr3, damage))
+TempCorrDatL <- TempCorrDat %>% pivot_longer(cols = c(TempCorr0, TempCorr1, TempCorr2, TempCorr3), 
+                                             names_to = c("repair"), values_to = "repair_value")
+TempCorrDatL <- subset(TempCorrDatL, Tbs > 6)
+TempCorrDatLrepair <- subset(TempCorrDatL, repair!="TempCorr0") 
+
+dldat <- data.frame(cbind(data.frame(dl0),data.frame(dl1),data.frame(dl2),data.frame(dl3)))
+dldatL <- dldat %>% pivot_longer(cols = c(survival, survival.1, survival.2, survival.3), names_to = c("repair"),
+                                 values_to = "repair_value")
+
+dldatKL <- dldat %>% pivot_longer(cols = c(kdot, kdot.1, kdot.2, kdot.3), names_to = c("kdot"), 
+                                 values_to = "kdot_value")
+
+dldat_comb <- data.frame(cbind(dldatL$repair, dldatL$repair_value, dldatKL$kdot, dldatKL$kdot_value))
+colnames(dldat_comb) <- c("repair", "repair_value", "kdot", "kdot_value")
+dldat_comb$repair_value <- as.numeric(dldat_comb$repair_value)
+dldat_comb$kdot_value <- as.numeric(dldat_comb$kdot_value)
+
+func_seq <- seq(0,100,1)
+repair0_func <- kdot0*(kdot0^(3/(func_seq)))
+repair1_func <- kdot1*(kdot1^(3/(func_seq)))
+repair2_func <- kdot2*(kdot2^(3/(func_seq)))
+repair3_func <- kdot3*(kdot3^(3/(func_seq)))
+rate_decay <- data.frame(func_seq, repair0_func, repair1_func, repair2_func, repair3_func)
+rate_decayL <- rate_decay %>% pivot_longer(cols = c(repair0_func, repair1_func, repair2_func, repair3_func), 
+                                           names_to = "repair", values_to = "repair_value")
+
+```
+
+
+
+```{r TLS - Damage and repair simulation 2}
+#| label: TLS Damage and repair simulation 2
+#| echo: true
+#| eval: true
+#| warning: false
+#| results: hide
+#| code-fold: true
+
+# Plot sensitivity temp~time and display CTmax and z
+base_tls_plot <- 
+ggplot(data = sim, aes(y = ht, x = time2)) +
+  geom_smooth(method = "lm", formula = y~x, colour = "black", fullrange = F) + 
+  ylim(35,45) + xlim(0,2.6) +
+  labs(y = bquote(Temperature~(degree*C)), x = bquote(log[10]~Time~(h))) +
+  theme_classic()
+
+base_tls_plot
+
+# Damage rate
+damage_plot <- 
+ggplot(data.frame(TempCorrDatL), aes(x = Tbs, y = damage)) +
+  geom_path() +
+  scale_x_continuous(limits = c(5,45)) +
+  scale_y_continuous(limits = c(0,0.06)) +
+  labs(y = bquote(Damage~rate~("%"~min^-1)), x = bquote(Temperature~(degree*C))) +
+  theme_classic()
+
+damage_plot
+
+# Repair rate
+repair_plot <- 
+ggplot(data.frame(TempCorrDatL), aes(x = Tbs, y = repair_value, colour = repair)) +
+  geom_path(aes(group = rev(repair))) +
+  scale_x_continuous(limits = c(5,45)) +
+  scale_y_continuous(limits = c(0,0.06)) +
+  scale_colour_manual(name = "Repair rate", values = c(cbp2[1:4]), 
+                      labels = c("None", "Low", "Moderate", "High")) +
+  labs(y = bquote(Repair~rate~("%"~min^-1)), x = bquote(Temperature~(degree*C))) +
+  theme_classic()
+
+repair_plot
+
+```
+
+It is essential to recognise that damage and repair have non-linear relationships with temperature and that both processes will occur simultaneously. Outside the stressful range of temperatures, repair outstrips damage, whereas inside the stressful range, damage outstrips repair. TDT focuses mainly on the balance within the stressful zone but ignores repair outside the stressful range, within the permissive range. Although damage may be the net result of exposure to high temperature, repair processes such as protein synthesis and chaperoning to limit protein misfolding, are occurring whenever temperatures permit (Santra *et al.,* 2019). Therefore, we calculated the damage/repair ratio (Fig. 1d), and the net damage rate (Fig. 1e), based on the balance between damage and repair at different temperatures, to predict the range of temperatures across which damage outweighs repair and *vice versa*. The processes that facilitate repair are likely also dependent on physiological condition, such that the repair rate itself declines when an organism is in poor physiological condition from accumulating thermal damage (Fig. 1f). 
+
+```{r TLS - Damage and repair simulation 3}
+#| label: TLS Damage and repair simulation 3
+#| echo: true
+#| eval: true
+#| warning: false
+#| results: hide
+#| code-fold: true
+
+# Ratio of damage:repair
+ratio_plot <-
+ggplot(data.frame(TempCorrDatLrepair), aes(x = Tbs, y = (damage/repair_value), colour = repair)) +
+  geom_path(aes(group = rev(repair))) +
+  geom_hline(yintercept = 1, linetype = 2) +
+  scale_x_continuous(limits = c(5,45)) +
+  scale_y_log10(limits = c(0.000000001,1000000000), 
+                breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1, 1, 10, 100, 1000, 10000, 100000, 1000000),
+                labels = c("0.000001", "0.00001", "0.0001", "0.001", "0.01", "0.1", "1", 
+                           "10", "100", "1000", "10000", "100000", "1000000")) +
+  scale_colour_manual(name = "Repair rate", values = c(cbp2[2:4]),
+                      labels = c("Low", "Moderate", "High")) +
+  annotate("text", x = 20, y = 10000, label = "Damage \noutweighs \nrepair", hjust = 0) +
+  annotate("text", x = 6, y = 0.0001, label = "Repair \noutweighs \ndamage", hjust = 0) +
+  labs(y = bquote(Damage:repair~ratio), x = bquote(Temperature~(degree*C))) +
+  theme_classic() + theme(legend.position = "none")
+
+ratio_plot
+
+# Net damage rate
+net_plot <- 
+ggplot(data.frame(TempCorrDatL), aes(x = Tbs, y = damage-repair_value, colour = repair)) +
+  geom_path(aes(group = rev(repair))) +
+  geom_hline(yintercept = 0, linetype = 2) +
+  scale_x_continuous(limits = c(5,45)) +
+  scale_y_continuous(limits = c(-0.06,0.1)) +
+  scale_colour_manual(name = "Repair rate", values = c(cbp2[1:4]), 
+                      labels = c("None", "Low", "Moderate", "High")) +
+  annotate("text", x = 6, y = -0.03, label = "Repair \noutweighs \ndamage", hjust = 0) +
+  annotate("text", x = 20, y = 0.05, label = "Damage \noutweighs \nrepair", hjust = 0) +
+  labs(y = bquote(Net~damage~rate~("%"~min^-1)), x = bquote(Temperature~(degree*C))) +
+  theme_classic()
+
+net_plot
+
+# Plot decline in repair over time due to damage accumulation 
+decline_plot <- 
+ggplot(dldatKL, aes(y = kdot_value, x = time, colour = kdot)) +
+  geom_vline(xintercept = 6350, colour = "red", lty = 2) + 
+  geom_vline(xintercept = 30870, colour = "red", lty = 2) + 
+  geom_vline(xintercept = 36550, colour = "red", lty = 2) + 
+  geom_path(aes(group = kdot)) +
+  scale_colour_manual(name = "Repair rate", values = c(cbp2[1:4]), 
+                      labels = c("None", "Low", "Moderate", "High")) +
+  labs(x = "Time (days)", y = bquote(Repair~rate~coefficient~(italic(dot(k))))) +
+  theme_classic() +
+  theme(axis.text.x = element_blank(), axis.ticks.x = element_blank())
+
+decline_plot
+
+```
+
+We applied this model to gridded hourly estimates of air temperature from the *microclimOZ* dataset (Kearney, 2019) to predict body temperatures of our hypothetical ectotherm for four weeks, including three days that reach damaging extreme temperatures (Fig. 1g). Predicted body temperatures were assumed to equal shaded air temperature, as in a small insect (note that heat budgets can be computed with the ectotherm model of NicheMapR (Kearney & Porter, 2020) for more complex scenarios where this simplifying assumption would not hold). Next, we integrated repair rate into probabilistic dynamic thermal ‘tolerance landscape’ models (Rezende *et al.* 2020). Note that the actual magnitude of the thermal stress is contingent on the temperature trajectories throughout the day. Thus, we simulate how the cumulative dosage of sublethal heat stress compromises physiological function, which is altered by (and further alters) the balance between damage and repair during the thermal regime (Fig. 1h). Finally, we visualised the assumed dependence of repair rate on physiological condition as a feedback process that reduces the repair rate coefficient ($\dot k$̇) when damage accumulates from exposure to heat Fig. 1i; details in Supporting Information). 
+
+```{r TLS - Damage and repair simulation 4}
+#| label: TLS Damage and repair simulation 4
+#| echo: true
+#| eval: true
+#| warning: false
+#| results: hide
+#| code-fold: true
+
+# Plot four weeks of body temperature
+tb_plot <- 
+ggplot(data.frame(dl0), aes(y = ta, x = time)) +
+  geom_vline(xintercept = 6350, colour = "red", lty = 2) + 
+  geom_vline(xintercept = 30870, colour = "red", lty = 2) + 
+  geom_vline(xintercept = 36550, colour = "red", lty = 2) + 
+  geom_line() +
+  labs(x = "Time (days)", y = bquote(Temperature~(degree*C))) +
+  scale_y_continuous(limits = c(3,40)) +
+  theme_classic() +
+  theme(axis.text.x = element_blank(), axis.ticks.x = element_blank())
+
+tb_plot
+
+# Plot physiological function over the four weeks incorporating repair 
+func_plot <- 
+ggplot(dldatL, aes(y = repair_value, x = time, colour = repair)) +
+  geom_vline(xintercept = 6350, colour = "red", lty = 2) + 
+  geom_vline(xintercept = 30870, colour = "red", lty = 2) + 
+  geom_vline(xintercept = 36550, colour = "red", lty = 2) + 
+  geom_path(aes(group = rev(repair))) +
+  scale_y_continuous(limits = c(0,100)) +
+  scale_colour_manual(name = "Repair rate", values = c(cbp2[1:4]), 
+                      labels = c("None", "Low", "Moderate", "High")) +
+  labs(x = "Time (days)", y = "Physiological function (%)") +
+  theme_classic() +
+  theme(axis.text.x = element_blank(), axis.ticks.x = element_blank())
+
+func_plot
+
+# Plot decline as a function of damage accumulation
+decline_func_plot <- 
+ggplot(rate_decayL, aes(y = repair_value, x = func_seq, colour = repair)) +
+  geom_path(aes(group = rev(repair))) +
+  scale_x_reverse() +
+  scale_colour_manual(name = "Repair rate", values = c(cbp2[1:4]), 
+                      labels = c("None", "Low", "Moderate", "High")) +
+  labs(x = "Physiological function (%)", y = bquote(Repair~rate~coefficient~(italic(dot(k))))) +
+  theme_classic()
+
+decline_func_plot
+
+```
+
+
+```{r fig-1_TLS_sim, warning=FALSE, fig.width=10, fig.height=10}
+#| label: fig-1_TLS_sim
+#| echo: true
+#| warning: false
+#| message: false
+#| results: hide
+#| code-fold: true
+
+ggarrange(base_tls_plot, damage_plot, repair_plot, 
+          ratio_plot, net_plot, decline_func_plot, 
+          tb_plot, func_plot, decline_plot,
+          labels = c("(a)", "(b)", "(c)", "(d)", "(e)", "(f)", "(g)", "(h)", "(i)"), 
+          align = "hv", ncol = 3, nrow = 3,
+          common.legend = TRUE, legend = "bottom")
+
+ggsave("Figures/Fig1.pdf", width = 10, height = 10)
+
+```
+
+**Figure 1.** Simulations of the counteracting processes of damage and repair during heat exposure of a hypothetical ectotherm. **(a)** The underlying thermal sensitivity curve for the ectotherm with intercept $CT_{max1h}$ (critical thermal maximum of 1 h of exposure) and slope $z$ (thermal sensitivity) parameters. **(b)** Damage rate as an approximately exponential function of temperature. **(c)** Repair rates as a function of temperature, simulated for the hypothetical ectotherm with no (black), low (orange), moderate (blue), and high (green) repair capacity using Arrhenius functions. **(d)** The damage/repair ratio as a function of temperature, where the dashed black line represents a 1:1 damage/repair ratio. **(e)** The net damage rate as a function of temperature (the balance between damage and repair processes), where the dashed black line represents equal damage and ratio. **(f)** The repair rate coefficient $\dot k$, which is the rate of repair at 20˚C, as a function of the organism’s physiological function. **(g)** The modelled body temperature during summer over a four-week time course. Dashed red lines in panels **g–i** represent extreme heat days during the time course. **(h)** Physiological function (%), the proportion of full performance possible following exposure to physiological stress that accumulates over the time course, simulated with different repair rates using the TLS framework, illustrating how this response may substantially impact the outcome of thermal stress events over time. **(i)** The dependence of repair rate coefficient ($\dot k$) on physiological function over the four-week time course. 
+
+
+# **TLS could help address key outstanding questions in global change biology and thermal ecology**
+
+## **Sublethal measures of thermal sensitivity and impacts on modular systems of an organism**
+
+In plants, most of the thermal vulnerability indices are calculated for leaves or cut leaf sections and thus describe thermal limits at the functional level at a very fine scale (e.g., photosynthetic machinery). The temperature ranges realised in most plant species’ geographic range are far narrower than measured thermal limits (Lancaster & Humphreys, 2020) and there is little evidence that extreme temperatures alone kill adult plants, especially trees (Marchin *et al.,* 2022). Both the onset of functional impairment of photosystems and the damage to leaf tissue are clearly dependent on thermal exposure time (Cook *et al.,* 2024; Faber *et al.,* 2024; Neuner & Buchner, 2023). However, we know little about how accumulated thermal damage to modular organs like leaves then affects the state of larger components such as a tree crown or the entire tree, and what the resource or energy costs are for repair or discarding dead tissue and regenerating. To illustrate these concepts, we used data from a heatwave during the dry summer of 2020 in Sydney, Australia. Daily maximum air temperature exceeded 45˚C on multiple occasions during a period of no rainfall, within which it is too dry to repair the damage from heat stress (orange area of Fig. 2a), resulting in crown dieback (Fig. 2b). Although there were then small rainfall events, extreme temperatures were still occurring and these conditions remain unfavourable for substantial repair (blue area of Fig. 2a), but crown cover loss was less dramatic (Fig. 2b). Larger rainfall events coupled with a reduction in maximum air temperature then provided conditions that allow repair of damage (green area of Fig. 2a) and then at least two species of urban trees had capacity to regenerate their crown, while others were too damaged (Fig. 2b).
+
+```{r Fig 2 - Climate and crown dieback, warning=FALSE}
+#| label: Fig 2 - Climate and crown dieback
+#| echo: true
+#| eval: true
+#| results: hide
+#| code-fold: true
+
+# Load in climate data and crown dieback data
+env <- read.csv("Data/Summer_Climate_Penrith.csv", header = TRUE)
+env$date <- dmy(as.character(env$Date)) 
+env.noNA <- env[!is.na(env$Rainfall_mm),] # remove missing values from one column
+scaleFactor <- max(env.noNA$Max_T_C) / max(env.noNA$Rainfall_mm)
+die <- read.csv("Data/Crown_Dieback.csv", header = TRUE)
+die$Date <- dmy(as.character(die$Date))
+
+fig2a <- ggplot(env, aes(x = date)) + 
+  geom_rect(aes(NULL, NULL, xmin = as.Date("2019-12-5"), xmax = as.Date("2020-1-15")), ymin = 45, ymax = 55, 
+            fill = alpha("burlywood", 0.1)) + 
+  geom_rect(aes(NULL, NULL, xmin = as.Date("2020-1-16"), xmax = as.Date("2020-2-10")), ymin = 45, ymax = 55, 
+            fill = alpha("lightblue", 0.1)) + 
+  geom_rect(aes(NULL, NULL, xmin = as.Date("2020-2-11"), xmax = as.Date("2020-4-1")), ymin = 45, ymax = 55, 
+            fill = alpha("seagreen3", 0.05)) +
+  geom_line(aes(y = Max_T_C), colour = "black", linewidth = 0.5) +
+  geom_bar(aes(y = Rainfall_mm * scaleFactor), fill = alpha("blue", 0.4), 
+           stat = "identity", width = 0.8, size = 0.25) +
+  coord_cartesian(xlim=c(as.Date("2019-12-15"), as.Date("2020-03-26")), ylim = c(0, 56)) +
+  scale_x_date(date_labels = "%d-%b-%y") +
+  scale_y_continuous(expand = c(0, 0), 
+                     limits = c(0, 56),
+                     sec.axis = sec_axis(~./scaleFactor, name="Rainfall (mm)")) +
+  labs(x = "Date", y = expression("Daily Maximum"~italic("T")[air]~~(degree*C))) +
+  theme(axis.title.x = element_blank(), axis.text.x = element_blank()) +
+  annotate("text", x = as.Date("2019-12-25"), y = 50, 
+           label = "Too dry to repair \n heat stress \n damage", 
+           size = 4, colour = "orangered") +
+  annotate("text", x = as.Date("2020-1-26"), y = 50, 
+           label = "Unfavourable \n conditions \n for repair", 
+           size = 4, colour = "blue3") + 
+  annotate("text", x = as.Date("2020-3-5"), y = 50, 
+           label = "Conditions allow repair \n of damage and canopy \n dieback regeneration", 
+           size = 4, colour = "darkgreen") +
+  theme_classic()
+
+fig2a
+
+fig2b <- 
+ggplot(die, aes(x = Date, y = Survival_percent, colour = Species_Code)) + 
+  geom_point(size = 2) +
+  geom_line(aes(group = Species_Code)) +
+  coord_cartesian(xlim = c(as.Date("2019-12-15"), as.Date("2020-03-26")), ylim = c(0, 100)) +
+  scale_x_date(date_labels = "%d-%b-%y") +
+  scale_colour_manual(values = c("#E41A1C", "#377EB8", "#4DAF4A", "#984EA3")) +
+  labs(x="Date", y="Tree crown cover (%)") + 
+  annotate("text", x = as.Date("2020-1-12"), y = 95, label = expression(italic("Acer rubrum")), 
+         parse = T, size = 4, colour = "#E41A1C") + #add text to figure
+  annotate("text", x = as.Date("2020-3-1"), y = 10, label = expression(italic("Banksia integrifolia")), 
+           parse = T, size = 4, colour = "#377EB8") + #add text to figure  
+  annotate("text", x = as.Date("2020-3-1"), y = 16, label = expression(italic("Liriodendron tulipifera")), 
+           parse = T, size = 4, colour = "#4DAF4A") + #add text to figure
+  annotate("text", x = as.Date("2020-1-28"), y = 81, label = expression(italic("Syzygium floribundum")), 
+           parse = T, size = 4, colour = "#984EA3") + #add text to figure
+  theme_classic() +
+  theme(legend.position = "none")
+
+fig2b
+```
+
+
+```{r fig-2}
+#| label: fig-2
+#| echo: true
+#| eval: false
+#| warning: false
+#| results: hide
+#| code-fold: true
+
+ggarrange(fig2a,fig2b, ncol = 1, align = "v", labels = c("(a)", "(b)"))
+
+ggsave("Figures/Fig2.pdf", height = 9, width = 9)
+
+```
+
+**Figure 2.** Example of (mostly) sublethal effects of heat on modular components of organisms (e.g., leaves on trees). **(a)** Extreme heat during dry conditions in Sydney, Australia during the 2019-2020 austral summer. Black line is the daily maximum air temperature and blue bars are rainfall events. **(b)** Recovery of tree crown foliage from heat stress in urban tree species during this time was conditional on heat tolerance and water availability. Responses were species-specific: some trees died when maximum air temperature surpassed physiological thresholds (*Banksia integrifolia*, blue), while surviving trees began recovering by resprouting new leaves in the weeks after rainfall (*Acer rubrum*, red; *Syzygium floribundum*, purple). The young leaves of some species were vulnerable to further heat damage (*Liriodendron tulipifera*, green), and full recovery of lost foliage of trees that accumulated substantial heat damage took multiple years for many individuals (data adapted from Marchin *et al.* (2022)).
+
+
+## **Demographic scaling across life stages**
+
+Ecologically relevant evaluations of thermal sensitivity and vulnerability across life stages are needed to effectively model impacts on population demographics. As an illustrative example, we simulated life-stage specific sensitivity to thermal load in a hypothetical plant (Fig. 3a,b) and applied a simple matrix population model (Fig. 3c) to simulate demographic projections (Fig. 3d,e). This approach (see also Salguero-Gómez *et al.,* 2015) is a basis for allowing TLS to alter probabilities for transition within matrices (Fig. 3b,c) if thermal stress occurs during a given life stage (see also Wiman *et al.,* 2014). Further integrations of sublethal thermal effects on growth and reproduction informed by TLS could be built into trait-based demographic models (e.g., Falster *et al.,* 2016).
+
+``` {r Fig 3 - Life stage TLS simulation probability}
+#| label: Fig 3 - Life stage TLS simulation probability
+#| echo: true
+#| eval: true
+#| warning: false
+
+# Simulate basic survival curves by life stage for sensitive and tolerant populations of hypothetical plants
+time3 <- seq(1,19,1)
+Seed <- c(rep(1,8),c(1,0.9,0.7,0.6,0.5,0.45,0.4,0.4,0.4,0.4,0.35))
+Seedling <- c(rep(1,8),c(1,1,0.9,0.9,0.9,0.85,0.85,0.8,0.7,0.65,0.65))
+Vegetative <- c(rep(1,8),c(1,1,1,1,1,1,1,1,0.8,0.7,0.7))
+Reproductive <- c(rep(1,6),c(0.9,0.8,0.8,0.7,0.6,0.4,0.25,0.2,0.2,0.15,0.1,0.1,0.1))
+demodat_c <- data.frame(cbind(time3, Seed, Seedling, Vegetative, Reproductive))
+demodat2 <- pivot_longer(demodat_c, cols = c(Seed, Seedling, Vegetative, Reproductive),
+                         names_to = "stage")
+demodat2$treatment <- "Tolerant"
+
+Seed <- c(rep(1,7),c(0.9,0.8,0.8,0.6,0.5,0.4,0.3,0.3,0.3,0.3,0.3,0.25)*0.5)
+Seedling <- c(rep(1,8),c(1,0.7,0.6,0.6,0.6,0.55,0.55,0.5,0.45,0.45,0.45)*0.7)
+Vegetative <- c(rep(1,10),c(1,0.8,0.8,0.8,0.75,0.7,0.6,0.55,0.55)*0.8)
+Reproductive <- c(rep(1,6),c(0.8,0.7,0.7,0.5,0.2,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1)*0.3)
+demodat_h <- data.frame(cbind(time3, Seed, Seedling, Vegetative, Reproductive))
+demodat3 <- pivot_longer(demodat_h, cols = c(Seed, Seedling, Vegetative, Reproductive),
+                         names_to = "stage")
+demodat3$treatment <- "Sensitive"
+demodat4 <- rbind(demodat2,demodat3)
+demodat4$stage <- factor(demodat4$stage, 
+                         levels = c("Seed","Seedling","Vegetative","Reproductive"))
+
+fig3a <- 
+ggplot(demodat4, aes(x = time3, y = value, colour = stage)) + 
+  geom_line() +
+  geom_vline(xintercept = 15, lty = 2, colour = cbp2[8]) +
+  scale_colour_manual(values = cbp2[c(2,3,4,6)], name = "") +
+  labs(y = "Probability to reach next \n life stage or to reproduce", 
+       x = "Cumulative thermal load") +
+  theme_classic() + theme(axis.text.x = element_blank(), 
+                          axis.ticks.x = element_blank(), 
+                          legend.position = "bottom") + 
+  facet_wrap(~treatment)
+
+#fig3a
+
+```
+
+
+
+```{r Life stage TLS simulation matrix population modelling}
+#| label: Life stage TLS simulation matrix population modelling
+#| echo: true
+#| eval: true
+#| warning: false
+
+# Use the simulated data in Fig3a
+# demodat4
+# 4 x 4 matrix
+# survival matrix for each demographic transition
+
+m_sp1 <- matrix(c(0.1, 0.3, 0, 0,
+                  0, 0.1, 0.4, 0,
+                  0, 0, 0.3, 0.5,
+                  20, 0, 0.3, 0.6), ncol = 4)
+
+colnames(m_sp1) <- c("Seed", "Seedling", "Vegetative", "Reproductive")
+rownames(m_sp1) <- c("Seed", "Seedling", "Vegetative", "Reproductive")
+m_sp1
+
+# Set initial population parameters
+n_seed <- 200
+n_seedling <- 100
+n_vegetative <- 100
+n_reproductive <- 10
+initial_pop <- matrix(c(n_seed,n_seedling,n_vegetative,n_reproductive), ncol = 1)  
+rownames(initial_pop) <- rownames(m_sp1)
+colnames(initial_pop) <- "Abundance"
+initial_pop
+
+# Model population dynamics if no constraints on population growth
+n_years <- 18
+out <- matrix(0, nrow = 4, ncol = n_years + 1)
+rownames(out) <- rownames(initial_pop)  
+colnames(out) <- seq(0, n_years)
+out[,1] <- initial_pop
+
+for(y in 2:(n_years + 1)){
+  out[,y] <-  m_sp1 %*% out[,y-1]
+}
+#out
+
+# Apply a heatwave with duration/intensity setting "15" based on the simulated cumulative thermal load axis
+# Add in cumulative thermal load that reduces survival probability
+intensity <- 15
+
+event_prob <- subset(demodat4, time3==intensity)
+event_prob_tol <- subset(event_prob, treatment=="Tolerant")
+event_prob_sen <- subset(event_prob, treatment=="Sensitive")
+event_prob
+
+m_event_sen <- matrix(event_prob_sen$value) # make altered survival matrix for sensitive
+rownames(m_event_sen) <- rownames(initial_pop)  
+
+m_event_tol <- matrix(event_prob_tol$value) # make altered survival matrix for heat
+rownames(m_event_tol) <- rownames(initial_pop)  
+
+# Set up dataframes for simulations
+out_stress_sen <- matrix(0, nrow = 4, ncol = n_years + 1)
+rownames(out_stress_sen) <- rownames(initial_pop)  
+colnames(out_stress_sen) <- seq(0, n_years)
+out_stress_sen[,1] <- initial_pop
+
+out_stress_tol <- matrix(0, nrow = 4, ncol = n_years + 1)
+rownames(out_stress_tol) <- rownames(initial_pop)  
+colnames(out_stress_tol) <- seq(0, n_years)
+out_stress_tol[,1] <- initial_pop
+
+n_sim <- 100
+out_stress_sen_list <- list()
+out_stress_tol_list <- list()
+
+# Define which time steps to apply heat event of defined intensity
+heat_app <- c(4,7,10,15) 
+
+for (n in 1:n_sim) {
+        
+  for(y in 2:(n_years + 1)){ # from time step 1 to time step n_years (0 is set by initial_pop)
+    if ((y-1) %in% heat_app==TRUE) { # apply heat stress event in these time steps
+      out_stress_sen[,y] <- m_sp1 %*% (out_stress_sen[,y-1] * 
+                                         (m_event_sen + abs(rnorm(4, mean = 0, sd = 0.1)))) # simulate variation
+      out_stress_tol[,y] <- m_sp1 %*% (out_stress_tol[,y-1] * 
+                                         (m_event_tol + abs(rnorm(4, mean = 0, sd = 0.1)))) # simulate variation
+    } 
+    else { # don't apply heat stress (via thermal load modifier)
+      out_stress_sen[,y] <- m_sp1 %*% (out_stress_sen[,y-1])
+      out_stress_tol[,y] <- m_sp1 %*% (out_stress_tol[,y-1])
+    }
+  }
+  out_stress_sen_df <- as.data.frame(t(out_stress_sen))
+  out_stress_sen_df$time <- seq(0,n_years,1)
+  out_stress_sen_df$n_sim <- n
+  out_stress_sen_df$treatment <- "Sensitive"
+  
+  out_stress_tol_df <- as.data.frame(t(out_stress_tol))
+  out_stress_tol_df$time <- seq(0,n_years,1)
+  out_stress_tol_df$n_sim <- n
+  out_stress_tol_df$treatment <- "Tolerant"
+  
+  out_stress_sen_list[[n]] <- out_stress_sen_df
+  out_stress_tol_list[[n]] <- out_stress_tol_df
+}
+
+stress_sen_df <- do.call(rbind, out_stress_sen_list)
+stress_tol_df <- do.call(rbind, out_stress_tol_list)
+stress_df <- rbind(stress_sen_df, stress_tol_df)
+#head(stress_df)
+
+stress_df_long <- stress_df %>%
+  pivot_longer(cols = c("Seed", "Seedling", "Vegetative", "Reproductive"),
+               names_to = "stage", values_to = "n")
+stress_df_long$stage <- factor(stress_df_long$stage, levels = c("Seed", "Seedling", "Vegetative", "Reproductive"))
+#head(stress_df_long)
+
+
+# Summarise initial population
+subset(stress_df_long, time=="0") %>% 
+  group_by(stage, treatment) %>%
+  summarise(mean(n))
+
+# Summarise final population
+subset(stress_df_long, time==n_years) %>% 
+  group_by(stage, treatment) %>%
+  summarise(round(mean(n)))
+```
+
+
+
+```{r Fig 3 - Life stage TLS simulation matrix population modelling}
+#| label: Fig 3 - Life stage TLS simulation matrix population modelling
+#| echo: true
+#| eval: true
+#| warning: false
+#| results: hide
+#| code-fold: true
+
+# Plot the population by life stage over time
+fig3d <-
+ggplot(stress_df_long, aes(x = time, y = n, colour = stage)) +
+  # denotes when heat event occurs if desired
+  # geom_vline(xintercept = heat_app[1], lty = 2, colour = cbp2[8]) + 
+  # geom_vline(xintercept = heat_app[2], lty = 2, colour = cbp2[8]) +
+  # geom_vline(xintercept = heat_app[3], lty = 2, colour = cbp2[8]) +
+  # geom_vline(xintercept = heat_app[4], lty = 2, colour = cbp2[8]) +
+  stat_summary(fun = "mean", geom = "line") +
+  labs(x = "Time step", y = "Number of individuals \n in each stage life") +
+  geom_line(aes(x = time, y = n, colour = stage, 
+                group = interaction(stage, n_sim)), alpha = 0.1) +
+  scale_colour_manual(values = cbp2[c(2,3,4,6)]) +
+  theme_classic() +
+  facet_wrap(~treatment)
+#fig3d
+
+
+ggarrange(fig3a, fig3d, nrow = 2, align = "v", 
+          common.legend = TRUE, legend = "bottom",
+          labels = c("(a)", "(d)"))
+
+#ggsave("Figures/Fig3ad.pdf", height = 6, width = 7)
+
+```
+
+
+
+```{r Fig 3 assembled version}
+#| label: Fig 3 - assembled version
+#| echo: true
+#| eval: true
+#| warning: false
+#| code-fold: true
+
+image_read(here("Figures", "Fig3final.png"))
+
+```
+
+**Figure 3.** Simulation of how thermal load sensitivity can differ across life stages in sensitive and tolerant populations of a hypothetical plant species with four distinct life stages: seed, seedling, vegetative (non-reproductive adult), and reproductive (actively flowering adult). **(a)** As cumulative thermal load increases toward prolonged high temperature, the probability of progression to later life stages and reproducing is reduced. Left panel shows probability declining with cumulative thermal load in a sensitive population and the right panel shows the same for a tolerant population. **(b)** Vectors of probabilities for transition to next life stage in the populations at the thermal load indicated by the dashed line. **(c)** Life stage transition matrix showing the proportion of each life stage transitioning to the next life stage or reproducing at each time step (e.g., that 10% of seeds remain seeds, 30% become seedlings, which implies 60% fail to establish as seedlings, while 60% of reproductive plants remain in reproductive stage, 30% stop flowering and return to vegetative stage, 10% die, and each reproductive plant in the reproductive stage at the time step produces 20 viable seeds that return to the seedbank). **(d)** Predicted population dynamics through time as the number of individuals in each life stage from 100 simulations under a scenario where a heat event equivalent to the thermal load indicated in **(a)** occurs at four of the time steps (indicated by sun symbol with arrows). **(e)** Initial population size at time step 0 and the final population at time step 20, showing the persistent effects of different sensitivity of life stage to cumulative thermal load that could have persistent or lag effects on population dynamics.
+
+
+## **Multi-stressor integration**
+
+Ultimately, when organisms are exposed to two or more stressors the cumulative effect of all stressors can be additive, synergistic, or antagonistic (Orr *et al.,* 2020) (Fig. 4a,b), and disentangling multi-stressor effects on heat tolerance should be a major focus of future work. Exposure to additional stressors will alter the TLS parameters, along with damage and repair rates, and thresholds for enzyme inactivity, potentially in complex or non-linear ways. As a simple (linear) example, a change in intercept ($CT_{max1h}$) with no change in slope ($z$) with the addition of non-thermal stressors implies an additive effect of the stressors (Fig. 4b). Changes in slope, with or without changes in intercept, imply an interactive effect, either synergistic or antagonistic (Fig. 4b), as the extra effect of the non-thermal stress can also be temperature-dependent (Duncan & Kefford, 2021). For these simplified examples, multi-stressor effects on $CT_{max1h}$ and $z$ can be evaluated by including interaction terms in statistical models. The limited empirical data available with multiple abiotic stressors (e.g., Enriquez & Colinet, 2017; Maynard Smith, 1957; Verberk *et al.,* 2023; Youngblood *et al.,* 2025) suggest the slope can change, implying an interactive effect.
+
+``` {r Fig 4 - Multi-stressor effects on TLS, fig.width=5, fig.height=10}
+#| label: Fig 4 - Multi-stressor effects on TLS
+#| echo: true
+#| eval: true
+#| warning: false
+
+# Simulate temperature and multi-stressor data
+simTemp <- c(30:70)
+simTime <- seq(0,2.5,0.061)
+simH <- seq(55,35,-0.5) + rnorm(seq(55,35,-0.5),0,0.5)
+simA <- seq(50,30,-0.5) + rnorm(seq(50,30,-0.5),0,0.5)
+simB <- seq(55,25,-0.74) + rnorm(seq(55,25,-0.74),0,0.5)
+simP <- seq(50,20,-0.74) + rnorm(seq(50,20,-0.74),0,0.5)
+simAB <- seq(60,28,-0.8) + rnorm(seq(60,28,-0.8),0,0.7)
+simTA <- seq(55,29,-0.65) + rnorm(seq(55,29,-0.65),0,0.5)
+simTB <- seq(55,25,-0.75) + rnorm(seq(55,25,-0.75),0,0.5)
+simTC <- seq(52,12,-1)  + rnorm(seq(52,12,-1),0,1)
+
+simdata <- data.frame(simTime, simTemp, simH, simA, simB, simP, simAB, simTA, simTB, simTC)
+simdata <- simdata %>% filter(row_number() %% 2 != 1)
+
+simdataA <- simdata %>% pivot_longer(cols = c(simH, simA, simB, simAB), names_to = "sim_type")
+simdataA1 <- simdata %>% pivot_longer(cols = c(simH, simP), names_to = "sim_type")
+simdataB <- simdata %>% pivot_longer(cols = c(simH, simTA, simTB, simTC), names_to = "sim_type")
+
+sim_mod <- lm(value ~ simTime * sim_type, simdataA1)
+simH_mod <- lm(value ~ simTime, subset(simdataA1, sim_type=="simH"))
+simP_mod <- lm(value ~ simTime, subset(simdataA1, sim_type=="simP"))
+
+# summary(sim_mod)
+# summary(simH_mod)
+# summary(simP_mod)
+
+```
+
+
+
+``` {r Fig 4 - Multi-stressor plot, fig.width=5, fig.height=10}
+#| label: Fig 4 - Multi-stressor plot
+#| echo: true
+#| eval: false
+#| warning: false
+#| results: hide
+#| code-fold: true
+ 
+fig4a <-
+ggplot(data = simdataA, aes(x = simTime, y = value, colour = sim_type)) +
+  geom_smooth(aes(y = value), method = "lm", formula = y~x, fullrange = T, se = F) +
+  labs(y = bquote(Temperature~(degree*C)), x = bquote(log[10]~Time~(h))) +
+  coord_cartesian(ylim = c(40,60)) + 
+  scale_x_continuous(expand = c(0, 0), limits = c(0,2.5)) +
+  scale_y_continuous(breaks = c(40,45,50,55)) +
+  scale_colour_manual(values = c(cbp2[8],cbp2[3],cbp2[4],cbp2[1]),
+                      labels = c(bquote(Stressor~altering~italic(CT[max1h])),
+                                 bquote(Stressor~altering~italic(CT[max1h])~and~italic(z)),
+                                 bquote(Stressor~altering~italic(z)),
+                                "Heat stress only"), name = "") +
+  theme_classic() + theme(legend.position = "bottom") + 
+  guides(colour = guide_legend(nrow = 2, byrow = TRUE), linetype = guide_legend(nrow = 2, byrow = TRUE))
+
+#fig4a
+
+fig4b <-
+ggplot(data = simdataB, aes(x = simTime, y = value, colour = sim_type)) +
+  geom_smooth(aes(y = value, linetype = sim_type), method = "lm", formula = y~x, fullrange = T, se = F) +
+  labs(y = bquote(Temperature~(degree*C)), x = bquote(log[10]~Time~(h))) +
+  coord_cartesian(ylim = c(28,60)) + scale_x_continuous(expand = c(0, 0), limits = c(0,2.5)) +
+  scale_colour_manual(values = c(cbp2[1],cbp2[2],cbp2[7],cbp2[7]),
+                      labels = c("Heat stress only",
+                                 "Heat stress + Stressor A",
+                                 "Heat stress + Stressor B",
+                                 "Heat stress + Stressors A + B"), name = "") +
+  scale_linetype_manual(values = c(1,3,3,1),
+                      labels = c("Heat stress only",
+                                 "Heat stress + Stressor A",
+                                 "Heat stress + Stressor B",
+                                 "Heat stress + Stressors A + B"), name = "") +
+  theme_classic() + theme(legend.position = "bottom") + 
+  scale_y_continuous(breaks = c(30,35,40,45,50,55)) +
+  guides(colour = guide_legend(nrow = 2, byrow = TRUE), linetype = guide_legend(nrow = 2, byrow = TRUE))
+
+#fig4b
+
+ggarrange(fig4a, fig4b, labels = c("(a)", "(b)"), align = "v")
+
+ggsave("Figures/Fig4.pdf", height = 5, width = 10)
+
+```
+
+
+```{r Fig 4 assembled version}
+#| label: Fig 4 - assembled version
+#| echo: true
+#| eval: true
+#| warning: false
+#| code-fold: true
+
+image_read(here("Figures", "Fig4final.png"))
+
+```
+
+**Figure 4.** Conceptual depiction of the effects of heat stress in combination with additional stressors within the TLS framework. **(a)** Different coloured lines represented potential changes in the $CT_{max1h}$ and/or $z$ parameters of the TLS curves when subject to additional stressors. **(b)** The difference between the TLS curves with heat stress alone (black solid line) and the TLS curves of heat stress with other stressors individually (A, yellow dotted line and B, orange dotted line). From these lines we would predict that the effect of all three stressors (heat, A, and B) is additive by summing the difference between heat stress only and heat stress with one stressor (orange solid line). If the net effect of the three stressors is more extreme than the additive effect, then the stressors accumulate synergistically, but if the effect of all three is less than the additive effect, then the stressors are antagonistic, and the net effect is less than the sum of their individual effects.
+
+
+# **Application of the TLS framework**
+
+## **Box 1. Application of the TLS framework to *Drosophila suzukii*** 
+
+*Drosophila suzukii* is a globally invasive pest that is a prime candidate species for studies of thermal load sensitivity. We used raw data for productivity of female flies from Ørsted *et al.* (2024) to explore damage accumulation and repair under combinations of temperature and exposure duration. Productivity of females is a crucial (sublethal) contributor to population viability that is more sensitive to temperature than thermal coma or death. 
+
+
+```{r Drosophila example data}
+#| label: Drosophila example data
+#| echo: true
+#| warning: false
+#| message: false
+
+# Extracted Drosophila suzukii female productive 'thermal death time' raw data 
+# from Ørsted et al. (2024) https://doi.org/10.1111/ele.14421
+
+drosdat <- read.csv("Data/Dsuzukii_data_Orsted2024.csv")
+#head(drosdat)
+
+```
+
+Using these data, we show how the relationship between temperature and exposure duration determines the conditions under which reproduction can potentially occur or fail (Box 1 Figure a).
+
+```{r Repair model parameters}
+#| label: Repair model parameters
+#| echo: true
+#| warning: false
+#| message: false
+
+# Set baseline Arrhenius model and repair rate parameters		
+TA <- 3516.25 # Arrhenius temperature, K
+TL <- 10.5 + 273.15 # Arrhenius temperature lower threshold, K
+TH <- 27 + 273.15 # Arrhenius temperature upper threshold, K
+TAL <- 50000 # Arrhenius temperature lower, K
+TAH <- 83333 # Arrhenius temperature upper, K
+TREF <- 20 + 273.15 # reference temperature, K
+Tbs <- seq(1, 51) # sequence of temperatures over which to model, deg C
+kdot_ref <- 0 # repair rate % per minute at ref temp 20 deg C
+kdot_decline <- 3 # arbitrary simulation! default = 3, 
+
+```
+
+
+Using a six-day simulation of realistic body temperatures (that ranged 6-34˚C; Fig. S1) derived from [`NicheMapR`] (Kearney & Porter, 2020), we applied the damage accumulation function (Equation 3) to demonstrate the accumulation of damage up to the T50 threshold (50% reproductive viability), which is reached after around 81 h (Box 1 Figure c). With no repair, a dynamic ‘tolerance landscape’ function (Rezende *et al.* 2014) shows that 50% probability of reproductive failure is reached around 100 h. Accounting for repair reduces the probability of reproductive failure to below 50% for the entire simulation (Box 1 Figure d). Thus, these models using data for heat failure with and without repair provide markedly different fitness outcomes.
+
+
+```{r Drosophila TLS simulation}
+#| label: Drosophila TLS simulation
+#| echo: true
+#| eval: true
+
+# 'ectotherm' - derived from NicheMapR - to get body temperatures for a small ectotherm otherwise using default settings
+# subset to a 6 day window. Values chosen for illustrative purposes only.
+st <- read.csv("ectotherm.csv")[2410 + 1:((24*6.1)-1),] 
+hours <- seq(1:nrow(st))
+dat <- data.frame(hours, st$TC+1)
+names(dat) <- c( "Time", "Temp")
+dat$Time_min <- dat$Time*60
+#plot(dat$Temp ~ dat$Time, type = "l")
+
+# Interpolate temperatures minute-by-minute
+interp_dat <- dat %>% 
+  complete(Time_min = 1:max(dat$Time_min)) %>% 
+  mutate(Temp = zoo::na.approx(Temp, na.rm = FALSE))
+
+#plot(interp_dat$Temp ~ interp_dat$Time_min, type = "l")
+
+interp_dat <- interp_dat[60:(nrow(interp_dat)-1),]
+
+```
+
+
+
+```{r Drosophila TLS simulation models}
+#| label: Drosophila TLS simulation models
+#| echo: true
+#| eval: true
+
+# Model no repair at all
+tl <- tolerance.landscape(drosdat$temp, drosdat$time)
+
+dl_norep <- dynamic.landscape2(interp_dat$Temp, tolerance.landscape(drosdat$temp, drosdat$time), 
+                   Tbs = Tbs, TA = TA, TAL = TAL, TAH = TAH,TL = TL,TH = TH,
+                   TREF = TREF, kdot_ref = 0, kdot_decline = 3)
+
+# Model repair based on repair values digitised from Ørsted et al. (2022) https://doi.org/10.1242/jeb.244514
+dl_rep <- dynamic.landscape2(interp_dat$Temp, tolerance.landscape(drosdat$temp, drosdat$time), 
+                   Tbs = Tbs, TA = TA, TAL = TAL, TAH = TAH,TL = TL,TH = TH,
+                   kdot_ref = 0.095, kdot_decline = 3)
+
+# Model temperature and time in the format that Ørsted et al. (2022,2024) use.
+omod <- lm(log10(time) ~ temp, data = drosdat)
+intercept <- coef(omod)[[1]]
+slope <- coef(omod)[[2]]
+
+# Apply accumulated damage function and compile dataset
+acc <- Acc_function((interp_dat$Time_min), interp_dat$Temp, intercept, slope)
+interp_dat[,ncol(interp_dat) + 1] <- acc
+interp_dat <- interp_dat[1:(nrow(interp_dat)-1),]
+#str(interp_dat)
+interp_dat$Surv <- dl_norep$survival
+interp_dat$Surv1 <- dl_rep$survival
+interp_dat$kdot <- dl_rep$kdot
+#interp_dat
+colnames(interp_dat) <- c("Time_min", "Time", "Temp", "Acc", "No repair", "With repair", "kdot")
+
+datlong <- interp_dat %>%
+   pivot_longer(cols = colnames(interp_dat[,5:6]), values_to = "Alive", names_to = "Repair")
+
+#head(datlong)
+ 
+datlong$Alive_inv <- 100 - datlong$Alive
+
+```
+
+To illustrate the potential for repair to alter heat failure rates and outcomes, we used [`metaDigitise`] (Pick *et al.* 2019) to digitise Fig. 5c from Ørsted *et al.* (2022), extract preliminary repair values (%) at six ‘repair temperatures’ for *D. suzukii*, and convert them to repair rate per minute ($\%~min^{-1}$).
+
+These repair values correspond to the improvement of knockdown time relative to a first heat exposure after 6 h of recovery at different temperatures to allow for repair before another knockdown assay. We recognise that these data are preliminary and correspond to knockdown rather than reproductive viability (Ørsted *et al.* 2022), but there is little empirical data on temperature-dependent repair rates available. We developed a simple model to simulate repair rates, where repair is modelled using the Sharpe-Schoolfield Arrhenius model (Schoolfield *et al.* 1981) that uses a repair rate coefficient ($\dot k$) to set the rate of repair at 20˚C (*de facto* optimum), such that instantaneous repair rates are high at optimal temperatures but drop rapidly at thermal extremes (equation and fitted parameters in Supporting Information). The six reported repair rate data points derived from Ørsted *et al.* (2022) correspond closely with the Arrhenius model for repair rate (Box 1 figure).
+
+```{r Drosophila suzukii repair curve}
+#| label: Drosophila suzukii repair curve
+#| echo: true
+#| eval: true
+#| warning: false
+#| results: hide
+#| code-fold: true
+ 
+# Digitise values for repair curve from Ørsted et al. (2022) https://doi.org/10.1242/jeb.244514
+# dros_rep_dig <- metaDigitise("Data/digitise", summary = FALSE)
+# 
+# 2 # Import existing data
+# 1 # Import all extracted data
+
+# Load previously digitised repair values in
+#write.csv(dros_rep_dig, "dros_rep_dig.csv")
+
+dros_rep_dig <- read.csv("Output/dros_rep_dig.csv")
+dros_rep_dat <- data.frame(dros_rep_dig$scatterplot.Drosophila_repair.png.x,
+                           dros_rep_dig$scatterplot.Drosophila_repair.png.y)
+colnames(dros_rep_dat) <- c("Temperature", "Repair_pct")
+
+# 6 h of repair time, approximate repair rate as % / min and % / hour
+dros_rep_dat$Repair_rate_min <- dros_rep_dat$Repair_pct/(6*60)
+dros_rep_dat$Repair_rate_h <- dros_rep_dat$Repair_pct/(6)
+
+kdot_ref <- 0.095 # repair rate % per min # 5.72 repair rate % per hour at ref temp 20˚C
+repair2 <- ArrFunc5(Tbs, TA, TAL, TAH, TL, TH, TREF, kdot_ref) 
+repair2df <- data.frame(repair2)
+repair2df$Temperature <- c(1:51)
+
+```
+
+
+
+```{r Drosophila suzukii Box 1 example plots}
+#| label: Drosophila suzukii Box 1 example plots
+#| echo: true
+#| eval: true
+#| warning: false
+#| results: hide
+#| code-fold: true
+
+dros_rep_plot <- 
+  ggplot(dros_rep_dat, aes(x = Temperature, y = Repair_rate_min)) +
+  geom_point(size = 3) + 
+  geom_line(data = repair2df, aes(x = Temperature, y = repair2)) +
+  #geom_smooth(method = "lm", formula = y ~ poly(x,2)) +
+  #geom_vline(xintercept = 20, lty = 2) +
+  #geom_hline(yintercept = 0.095, lty = 2) +
+  labs(y = bquote(Repair~rate~("%"~min^-1)), x = bquote(Temperature~(degree*C))) +
+  theme_classic()
+
+dros_rep_plot
+
+# Plot TDT (non-log10)
+dros_tdt_plot <-
+ggplot(data = drosdat, aes(x = (10^(log10(time)))/60, y = temp)) +
+  geom_smooth(method = "lm", formula = y ~ log10(x), colour = "black", fullrange = T, se = F) +
+  labs(y = bquote(Temperature~(degree*C)), x = "Exposure time (h)") +
+  scale_x_continuous(limits = c(0.01,20), breaks = c(1,5,10,15,20), expand = c(0,0)) +
+  scale_y_continuous(limits = c(32,42), breaks = c(32,34,36,38,40,42)) +
+  annotate("text", x = 7, y = 33, label = bquote(Reproductive~potential)) +
+  annotate("text", x = 12, y = 38, label = bquote(Reproductive~failure)) +
+  theme_classic()
+
+dros_tdt_plot
+
+# Plot temperature profile for the simulation
+dros_temp_plot <- 
+  ggplot(datlong, aes(x = Time_min/60, y = Temp)) +
+  geom_line(linewidth = 1) +
+    labs(x = "Time (h)", y = bquote(Temperature~(degree*C))) +
+  scale_x_continuous(limits = c(0,125), breaks = c(0,24,48,72,96,120)) +
+  theme_classic()
+  
+dros_temp_plot
+
+
+# Plot damage that accumulates with and without repair across the time profile for the simulation
+dros_damageacc_plot <-
+ggplot(datlong, aes(x = Time_min/60, y = Acc, colour = Acc)) +
+  geom_line(linewidth = 1) +
+  scale_colour_gradientn(bquote(Accumulated~damage~to~reach~threshold~("%")), colours = colfunc(21), limits = c(0,100)) +
+  geom_point(data = datlong, aes(x = Time_min/60, y = Acc, fill = Alive_inv),
+            shape = 21, size = 0.3, alpha = 1) +
+  scale_fill_gradientn(bquote(Accumulated~damage~to~reach~threshold~("%")),
+                       colours = colfunc(21), limits = c(0,100)) +
+  labs(x = "Time (h)", y = bquote(atop(Accumulated~damage,~to~reach~threshold~("%")))) +
+  scale_y_continuous(limits = c(0,100), breaks = c(0,20,40,60,80,100)) +
+  theme_classic() + theme(legend.position = "none")
+
+dros_damageacc_plot
+
+
+# Plot predicted cumulative probability of reproductive failure with and without repair across the time profile for the simulation
+dros_acc_plot <-
+ggplot(datlong, aes(x = Time_min/60, y = Alive_inv, colour = Repair)) +
+  geom_line(data = datlong, aes(x = Time_min/60, y = Alive_inv), linewidth = 1) +
+  #scale_colour_gradientn(bquote(Damage~("%")), colours = colfunc(21), limits = c(0,100)) +
+  scale_colour_manual(values = c(cbp2[2], cbp2[4]), name = "") +
+  #geom_hline(yintercept = 100, linetype = "dashed") +
+  labs(x = "Time (h)", y = bquote(atop(Predicted~cumulative~probability,
+                                       ~of~reproductive~failure~("%")))) +
+  scale_y_continuous(limits = c(0,100)) +
+  theme_classic() + theme(legend.position = "none")
+
+dros_acc_plot
+
+```
+
+
+
+```{r fig-S1}
+#| label: fig-S1
+#| echo: true
+#| eval: true
+#| warning: false
+#| results: hide
+#| code-fold: true
+
+# Plot damage that accumulates with and without repair across the temperature profile for the simulation
+dros_damage_plot <-
+ggplot(datlong, aes(x = Time_min/60, y = Temp, colour = Alive_inv)) +
+  geom_line(linewidth = 1) +
+  scale_colour_gradientn(bquote(atop(Mortality,probability~("%"))), colours = colfunc(21), limits = c(0,100)) +
+  # geom_point(data = datlong, aes(x = Time_min/60, y = Temp, fill = Alive_inv),
+  #            shape = 21, size = 1, alpha = 1) +
+  scale_fill_gradientn(bquote(atop(Mortality,probability~("%"))),
+                       colours = colfunc(21), limits = c(0,100)) +
+  labs(x = "Time (h)", y = bquote(Temperature~(degree*C))) +
+  scale_y_continuous(limits = c(6,35), breaks = c(10,15,20,25,30,35)) +
+  theme_classic() + theme(legend.position = "none") +
+  # theme(legend.position = "right", strip.background = element_blank(),
+  #       strip.text = element_text(face = "italic")) +
+  facet_wrap(~Repair)
+
+dros_damage_plot
+ggsave("Figures/FigS1.pdf", height = 5, width = 8)
+```
+
+**Fig. S1.** Simulation of body temperatures over six days for the *D. suzukii* example in Box 1. Left panel is damage without allowing repair and the right panel includes repair as in Box 1 figure b. Colours correspond to accumulated damage as in Box 1 figure c. The increase in ‘brown’ colouration shows how damage is higher at the end of the six-day period without considering repair compared with the ‘repair’ scenario. 
+
+```{r fig-Box1, fig.width=7, fig.height=6}
+#| label: fig-Box1
+#| echo: true
+#| eval: true
+#| warning: false
+#| results: hide
+#| code-fold: true
+
+ggarrange(dros_tdt_plot, dros_rep_plot, 
+          dros_damageacc_plot, dros_acc_plot, 
+          nrow = 2, ncol = 2, align = "v",
+          labels = c("(a)", "(b)", "(c)", "(d)"))
+
+ggsave("Figures/Box 1 Fig.pdf", height = 6, width = 7)
+
+```
+
+**Box 1 Figure:** Conceptual and practical application of the Thermal Load Sensitivity (TLS) framework to female *Drosophila suzukii* reproduction. **(a)** Regression between temperature (*y*-axis) and time (h) to event (in this case $T_{50}$, *x*-axis) data is then used to estimate the $CT_{max1h}$ (intercept of curve) and thermal sensitivity $z$ (slope of the log10-linear relationship). **(b)** Repair rates as a function of temperature. Points are estimates for *D. suzukii* repair rate from Ørsted *et al.* (2022) and the curve is modelled repair rates using an Arrhenius function. **(c)** Simulating temperature exposure across six days with cool nights and applying the accumulated damage model (Equation 3) to illustrate how damage accumulates up to reach the threshold $T_{50}$. **(d)** Predicted cumulative probability of reproductive failure as using dynamic tolerance landscape models without repair (orange) and with repair (green) that is occurring both during stress and also outside of the stressful range of temperatures.
+
+
+## **Box 2: Estimating the potential spatial distribution of the invasive pest *Drosophila suzukii* **
+
+*Drosophila suzukii* is a globally invasive pest that would have devasting consequences to agricultural industries if it were to establish in Australia. Current pest risk analysis reports indicate it would have major impacts on berry, stone fruit, and viticulture; collectively worth at least $5.4 billion AUD (DAFF, 2013). To identify regions where *D. suzukii* could maintain productivity (positive population growth), we extend the example from Box 1 to estimate the spatial extent in which female *D. suzukii* could remain productive for seven days in January in Australia (summer) using gridded microclimate data from *microclimOZ* (Kearney, 2019). 
+
+In the Box 2 models, we applied the repair rate Arrhenius model (shown in Box 1 Figure, which includes the decay in repair rate based on damage accumulation impacting physiological function) to the dynamic tolerance landscape model (dynamic.landscape2 function). Allowing the probability of successful productivity to increase when temperature conditions facilitated partial repair at a rate that is dependent on temperature and accumulated damage (see Box 1 Figure) reduced the damage accumulated over the seven-day simulation. Maps for the distribution of productivity are based on the dynamic tolerance landscape model without repair (Rezende *et al.,* 2020) (Fig. S3a), the dynamic CTmax model without repair (Jørgensen *et al.,* 2021) (Fig. S3b), the dynamic tolerance landscape model with repair rate (Fig. S3c), and productivity probability difference between the tolerance landscape models with and without repair (Fig. S3d). 
+
+For applying Jørgensen *et al.* (2021) models for Box 2, we integrated equation 2 from Jørgensen *et al.* (2021) by fixed time steps. The lethal dose ($d_L$) function integrates the parameters for the critical temperature causing 50% mortality in 24 hours ($CT_{max24h}$) and the temperature causing 50% mortality in 1 hour ($CT_{max1h}$) to determine the lethal dose of heat, such that:
+
+$$
+d_L = exp^{k ~\cdot~ (\frac {CTmax1h}{CTmax24h}-1)} 
+$$
+$$
+k = \frac {log(10)}{-\beta^{-1}}
+$$
+$$
+CTmax24h = \frac {log_{10}(24) - \alpha}{\beta}
+$$
+$$
+CTmax1h = \frac {log_{10}(1) - \alpha}{\beta}
+$$
+
+The Rezende *et al.* (2020) models apply the ad hoc dynamic.landscape function (details in Supplementary Information, p. 12 of Rezende *et al.* (2020). We then modified this function (dynamic.landscape2) to add the Sharpe-Schoolfield Arrhenius model for repair to the ‘alive’ term (range: 0-100) to indicate the status of the organism or sublethal component thereof. As the value of ‘alive’ reduced below 0.99, the function implements a decay in repair rate ($\dot k_{ref}$) to simulate the decline in repair capacity due to accumulation of injury or physiological damage.
+
+$$
+\dot{k}_{ref_i} = \dot{k}_{ref} ~\cdot~ (\dot{k}_{ref})^{\frac{\dot{k}_{dec}}{alive}}
+$$
+
+
+```{r Spatial model example set parameters}
+#| label: Spatial model example set parameters
+#| echo: true
+#| eval: true
+#| warning: false
+
+# Generate tolerance landscape for parameterising models
+# Drosophila suzukii
+
+data <- read.csv("Dsuzukii_data_Orsted2024.csv")
+#head(data)
+
+tl <- tolerance.landscape(data$temp, data$time)
+Tb <- data$temp
+time <- data$time
+surv.time <- tl$S[ ,2]
+surv.pct <- seq(100, 0, length.out = length(c(0, surv.time)))
+par(mfrow = c(1, 1), mar = c(4.5, 4, 1, 1))
+plot(c(0, surv.time), surv.pct, type = 'l', ylab = 'survival, %', xlab = 'time')
+Tb.mn <- tl$ta.mn
+z <- 3.27
+slope <- -1/z
+intercept <- 11.092 # -tl$ctmax * slope for hours. # Set to 11.092 to replicate ctmax.4h value from Ørsted et al 2024
+plot(seq(30, 41), 10 ^ (seq(30, 41) * slope + intercept), 
+     ylab = 'survival time, hours', xlab = 'body temperature, C', pch = 16, type = 'b')
+ctmax.1h <- (log10(1) - intercept) / slope # temperature causing 50% mortality in 1 hour
+ctmax.4h <- (log10(4) - intercept) / slope
+ctmax.24h <- (log10(24) - intercept) / slope # temperature causing 50% mortality in 1 day
+R0 <- 1
+k <- log(10) / z
+
+# Set Arrhenius model and repair rate parameters		
+TA <- 3516.25 # Arrhenius temperature, K
+TL <- 10.5 + 273.15 # Arrhenius temperature lower threshold, K
+TH <- 27 + 273.15 # Arrhenius temperature upper threshold, K
+TAL <- 50000 # Arrhenius temperature lower, K
+TAH <- 83333 # Arrhenius temperature upper, K
+TREF <- 20 + 273.15 # reference temperature, K
+Tbs <- seq(1, 51) # sequence of temperatures over which to model, deg C
+kdot_ref <- 0 # repair rate % per minute at ref temp 20 deg C
+kdot_decline <- 3 # arbitrary simulation! default = 3, 
+
+# Plot the thermal response curve for repair
+# repair1 <- ArrFunc5(Tbs, TA, TAL, TAH, TL, TH, TREF, kdot_ref) 
+# par(mfrow = c(1, 1), mar = c(4.5, 4, 1, 1))
+# plot(Tbs, repair1, type = 'l', ylab = 'repair, % per min', xlab = 'body temperature')
+# abline(v = 28.5, col = 2)
+
+
+Tb <- rep(ctmax.1h, 60 * 24)
+shift <- 10 ^ ((Tb.mn - Tb) / z) 
+# minutes to shift survival curve by at each minute given temperature at that minute	
+time.rel <- 0
+result <- matrix(data = 0, nrow = length(Tb) - 1, ncol = 2)
+repair <- ArrFunc5(Tb, TA, TAL, TAH, TL, TH, TREF, kdot_ref) 
+
+for(i in 1:(length(Tb) - 1)){
+  # adjust time for the survival probability vs time relationship to account 
+  # for current temperature and then get % alive after the current time increment
+  alive <- try(approx(c(0, shift[i] * surv.time), surv.pct, 
+                      xout = time.rel + 1, ties = "ordered")$y, silent = TRUE)
+  alive <- min(100, alive + repair[i]) # add repair, but still catch NA
+  if(is.na(alive)){ # cap at 100% surviving
+    alive <- 100
+    break
+  }
+  result[i, 1]<- alive # save current survival fraction
+  # now interpolate to get the time that goes with the survival %
+  time.rel <- try(approx(surv.pct, c(0, shift[i + 1] * surv.time),
+                         xout = alive)$y, silent = TRUE)
+  result[i, 2] <- time.rel # save time since start
+}
+
+# plot(result[, 2], result[, 1], type = 'l', ylab = "% surviving", xlab = "time, min")
+
+# Integrate damage (experimental end point of death/coma gives lethal dose)
+L <- matrix(0, nrow = length(Tb))
+
+for(i in 2:(length(Tb))){
+  if(Tb[i] > ctmax.24h){
+    dLdt <- exp(k * (Tb[i] - ctmax.24h) - 1)
+  }else{
+    dLdt <- 0
+  }
+  L[i] <- L[i-1] + dLdt
+}
+
+Ld <- L[which(result[, 1]==0)[1]]
+Ld
+
+```
+
+
+
+```{r set up spatial distribution simulation}
+#| label: set up spatial distribution simulation
+#| echo: true
+#| eval: true
+#| warning: false
+#| message: false
+#| code-fold: true
+#| results: hide
+
+# day of year to start simulation
+DOY <- 1
+sim.length <- 7 # n days to simulate
+
+# read in air temps and filter for month, ctmax
+tair.120cm <- brick("Data/TA120cm_2017.nc")
+tair.120cm.sub <- tair.120cm[[(DOY * 24 + 1):(DOY * 24 + sim.length * 24)]]
+tair.ctmax <- tair.120cm.sub / 10
+tair.ctmax[tair.ctmax < ctmax.1h] <- 0
+tair.ctmax[tair.ctmax > ctmax.1h] <- 1
+sum.sub <- calc(tair.ctmax, function(x){sum(x)})
+max.sub <- calc(tair.120cm.sub, function(x){max(x)})
+
+ct.range <- sum.sub
+ct.range[ct.range == 0] <- -1
+ct.range[ct.range >= 0] <- 0
+ct.range[ct.range == -1] <- 1
+
+# create grid of points
+nc <- nc_open("Data/TA120cm_2017_time.nc")
+lon <- ncvar_get(nc, "longitude") # extract longitude values
+lat <- ncvar_get(nc, "latitude") # extract latitude values
+sites <- expand.grid(lon, lat) # 3618 sites to iterate over each day
+
+# Loop across sites and calculate damage (first with no repair) 
+# for dynamic tolerance landscapes (Rezende approach) and dynamic ctmax (Jørgensen approach) using the 
+# Drosophila suzukii female fecundity parameterised data plotted over Australia.
+# Note: Simulation may take > 1 hour to run for each level of repair
+
+kdot_ref <- 0 ### change kdot_ref value to simulate repair, or 0 for no repair ###
+
+
+```
+
+This simulation first fits a traditional static 50% threshold ($CT_{max1h}$ = 36.3˚C) model to determine the spatial extent within which *D. suzukii* could remain productive (grey background area in Box 2 Figure a; Fig. S2). Then, it fits dynamic thermal landscape models from Rezende *et al.* (2020) and dynamic *CTmax* models from Jørgensen *et al.* (2021), each with and without implementing the damage-repair feedback, applied to each grid cell. 
+
+
+```{r run spatial distribution simulation}
+#| label: run spatial distribution simulation
+#| echo: true
+#| eval: false
+#| warning: false
+
+# Takes tens of minutes up to hours to run # not run in markdown 
+
+# parameters referring to survival or surv can be any sublethal measure, this is a generic function term
+
+all.results <- matrix(nrow = nrow(sites), ncol = 4)
+
+par(mfrow = c(1, 1), mar = c(4.5, 4, 1, 1))
+plot(ct.range, zlim = c(0.5, 1), col = 'grey', main = "range based on 120 cm air temperature, deg C", 
+     ylab = "latitude", xlab = "longitude")
+ozmap(x = "country", add = TRUE)
+
+kdot_ref <- 0 ### change to modify repair rate
+
+for(ii in 1:nrow(sites)){ # start site loop
+  loc <- c(sites[ii, 1], sites[ii, 2])
+  tair.120cm_loc <- extract.nc("TA120cm_2017_time.nc", loc)[(DOY * 24 + 1):(DOY * 24 + sim.length * 24), ]
+  if(!is.na(tair.120cm_loc$data[1])){ # check if land or sea
+    if(is.na(all.results[ii, 1])){
+      variable.temp <- tair.120cm_loc$data / 10
+      if(max(variable.temp) < tl$ctmax){ # don't do sites that won't survive one minute
+        time.min <- spline(variable.temp, n = length(variable.temp - 1) * 60)$x - 1	
+        Tb.min <- spline(variable.temp, n = length(variable.temp - 1) * 60)$y
+        
+        # Daily survival probability
+        # dynamic.landscape function (function returns NA for survival probability < 0) 
+        # Loop every 1440 min (= 24 h * 60 min)
+        day <- rep(1:sim.length, each = 1440)
+        surv.out <- seq(100, 0, length.out = length(c(0, surv.time))) # vector to hold survival
+        # plot(surv.time, surv.pct[-1], ylab = 'surviving %', xlab = 'time, min', type = 'l')
+        final <- matrix(data = 100, nrow = sim.length, ncol = 1)
+        final2 <- final
+        alive <- 100
+        last.alive <- alive
+        damage <- 0
+        result2 <- matrix(data = 0, nrow = length(tair.120cm_loc$data) * 60, ncol = 2)
+        for(xx in 1:sim.length){ # loop through days
+          Tb <- Tb.min[xx == day]
+          shift <- 10 ^ ((Tb.mn - Tb) / z) # minutes to shift survival curve by at each minute	
+          time.rel <- 0
+          result <- matrix(data = 0, nrow = length(Tb) - 1, ncol = 2)
+          repair <- ArrFunc5(Tb, TA, TAL, TAH, TL, TH, TREF, kdot_ref)
+          #plot(seq(0, 1440-1), Tb, ylab = 'body temperature', xlab = 'time, min', type = 'l')
+          #plot(seq(0, 1440-1), repair, ylab = '% repair / min', xlab = 'time, min', type = 'l')
+          #plot(seq(0, 1440-1), shift, ylab = 'survival shift, min', xlab = 'time, min', type = 'l')
+          # count <- 0
+          if(xx == 1){
+            starti = 2
+            result[1, 1] <- 100
+          }else{
+            starti = 1
+          }
+          for(i in starti:(length(Tb) - 1)){
+            alive <- try(approx(c(0, shift[i] * surv.time),
+                                surv.pct, xout = time.rel + 1, ties = "ordered")$y,
+                         silent = TRUE)
+            if(is.na(alive)){
+              if(last.alive != 100){
+               alive <- 0
+              }else{
+               alive <- 100
+              }
+            }
+            if(alive == 0){
+             break
+            }
+            
+            alive <- min(100, alive + repair[i]) # add repair, but still catch NA
+            # modify kdot_ref based on alive. If alive > 99, kdot_ref stays the same. 
+            # If alive < 99, kdot_ref reduces as a function of alive
+            kdot_ref1 <- ifelse(!is.na(alive) && alive < 99, kdot_ref*(kdot_ref^(kdot_decline/(alive))), kdot_ref)
+            alive <- alive + ArrFunc5(Tb[i], TA, TAL, TAH, TL, TH, TREF, kdot_ref1)
+            alive <- ifelse(alive > 100, 100, alive)
+            last.alive <- alive
+            result2[(xx - 1) * 24 * 60 + i, ] <- c(i, alive)
+
+            result[i, 1] <- alive
+            time.rel <- try(approx(surv.pct, c(0, shift[i + 1] * surv.time), xout = alive)$y, silent = TRUE)
+            result[i, 2] <- time.rel
+          }
+          
+          cat(xx, '\n')
+          final[xx] <- min(result[, 1], na.rm = TRUE)
+          
+          # Jørgensen et al. approach - adapted from equation 2: https://doi.org/10.1038/s41598-021-92004-6
+          L <- matrix(Ld, nrow = length(Tb))
+          L[1] <- damage
+          for(i in 2:(length(Tb))){
+            if(Tb[i] > ctmax.24h){
+              dLdt <- exp(k * (Tb[i] - ctmax.24h) - 1)
+            }else{
+              dLdt <- 0
+            }
+            L[i] <- max(0, L[i-1] + dLdt - repair[i] / 100 * Ld)
+            if(L[i] > Ld){ # dead
+              L[i] <- Ld
+              break
+            }
+          }
+          #points(L/Ld * 100, col = 'purple', type = 'l')
+          # work out damage end point for carry over to next day
+          damage.end <- tail(L, 1)
+          if(damage.end > Ld){
+           damage <- Ld
+          }
+          final2[xx] <- max(L, na.rm = TRUE)
+        } # end of day loop
+        #plot(100 - result2[, 2], type = 'l')
+        #plot(100 - final, type = 'h')
+        #points(final2 / Ld * 100, type = 'p', pch = 16, col = 2, ylim = c(0, 100))
+        #plot(100-final, final2 / Ld * 100, pch = 16, ylim = c(0, 100), xlim = c(0, 100), ylab = 'Jorgensen', xlab = 'Rezende')
+        #abline(0, 1)
+        points(loc[1], loc[2], cex = sum(final[,1])/30/100, pch = 16, col = 'blue')
+        if(min(final[,1]) / 75 == 0){
+          points(loc[1], loc[2], pch = 4)
+        }else{
+          points(loc[1], loc[2], cex = min(final[,1]) / 75, pch = 16, col = 'blue')
+        }
+        write.table(c(loc, min(final[,1])), file = "Rezende.out.rev095.csv", sep = ",",
+                   col.names = F, qmethod = "double", append = T) ## Change these filenames as needed for different levels of repair
+        write.table(c(loc, max(final2[,1])/Ld * 100), file = "Jorgensen.out.rev095.csv", sep = ",", ## Change these filenames as needed for different levels of repair
+                   col.names = F, qmethod = "double", append = T)
+        all.results[ii, ] <- c(loc, min(final[, 1]), max(final2[, 1]) / Ld * 100) 
+        cat('site', ii, '\n')
+      }else{
+        points(loc[1], loc[2], pch = 4)
+      }
+    }
+  }
+}
+
+all.results2 <- as.data.frame(na.omit(all.results))
+colnames(all.results2) <- c('lon', 'lat', 'surv', 'dose')
+plot(ct.range, zlim = c(0.5, 1), col = 'grey',  ylab = 'latitude', xlab = 'longitude', legend = FALSE)
+points(all.results2[, 1:2], cex = 1 - all.results2$dose / 75, pch = 16, col = 'blue')
+plot(ct.range, zlim = c(0.5, 1), col = 'grey',  ylab = 'latitude', xlab = 'longitude', legend = FALSE)
+points(all.results2[, 1:2], cex = all.results2$surv / 120, pch = 16, col = 'blue')
+all.results.no.repair <- all.results2
+
+
+# write.csv(Output/all.results.no.repair, 'dsuz.results.norepair.csv')
+# write.csv(Output/all.results.with.repair, 'dsuz.results.repair095.csv')
+
+
+```
+
+
+
+```{r spatial model example read in data outputs}
+#| label: spatial model example read in data outputs
+#| echo: true
+#| eval: true
+#| warning: false
+#| message: false
+#| code-fold: true
+ 
+dsuz.results.no.repair0 <- read.csv("Output/dsuz.results.norepair.csv")[, -1]
+dsuz.results.repair <- read.csv("Output/dsuz.results.repair095.csv")[, -1]
+
+rezende.repair <- read.csv("Output/Rezende.out.rev095.csv", 
+                           header = F, col.names = c("Var","Value"))
+jorgensen.repair <- read.csv("Output/Jorgensen.out.rev095.csv", 
+                             header = F, col.names = c("Var","Value"))
+rezende.no.repair <- read.csv("Output/Rezende.out.rev.0.csv", 
+                              header = F, col.names = c("Var","Value"))
+jorgensen.no.repair <- read.csv("Output/Jorgensen.out.rev.0.csv", 
+                                header = F, col.names = c("Var","Value"))
+
+# head(rezende.repair)
+# head(jorgensen.repair)
+# 
+# head(rezende.no.repair)
+# head(jorgensen.no.repair)
+
+rezende.repair_wide <- pivot_wider(rezende.repair, names_from = Var, values_from = Value)
+rezende.repair_wide <- cbind(data.frame(rezende.repair_wide$`1`, rezende.repair_wide$`2`, rezende.repair_wide$`3`))
+names(rezende.repair_wide) <- c("lat", "lon", "r_surv")
+#head(rezende.repair_wide)
+
+jorgensen.repair_wide <- pivot_wider(jorgensen.repair, names_from = Var, values_from = Value)
+jorgensen.repair_wide <- cbind(data.frame(jorgensen.repair_wide$`1`, jorgensen.repair_wide$`2`, jorgensen.repair_wide$`3`))
+names(jorgensen.repair_wide) <- c("lat", "lon", "j_surv")
+#head(jorgensen.repair_wide)
+
+rezende.no.repair_wide <- pivot_wider(rezende.no.repair, names_from = Var, values_from = Value)
+rezende.no.repair_wide <- cbind(data.frame(rezende.no.repair_wide$`1`, rezende.no.repair_wide$`2`, rezende.no.repair_wide$`3`))
+names(rezende.no.repair_wide) <- c("lat", "lon", "r_surv")
+#head(rezende.no.repair_wide)
+
+jorgensen.no.repair_wide <- pivot_wider(jorgensen.no.repair, names_from = Var, values_from = Value)
+jorgensen.no.repair_wide <- cbind(data.frame(jorgensen.no.repair_wide$`1`, jorgensen.no.repair_wide$`2`, jorgensen.no.repair_wide$`3`))
+names(jorgensen.no.repair_wide) <- c("lat", "lon", "j_surv")
+#head(jorgensen.no.repair_wide)
+
+repair.dat <- as.data.frame(cbind(rezende.repair_wide,
+                                  (100-jorgensen.repair_wide[,3]), 
+                                  # convert to 'survival' instead of 'mortality'
+                                  rezende.no.repair_wide[,3], 
+                                  (100-jorgensen.no.repair_wide[,3])))
+names(repair.dat) <- c("lat", "lon", "r_surv_repair", "j_surv_repair",
+                       "r_surv_no_repair", "j_surv_no_repair")
+
+head(repair.dat)                            
+
+```
+
+
+
+```{r build maps, fig.width=8, fig.height=11}
+#| label: build maps
+#| echo: true
+#| eval: true
+#| warning: false
+#| message: false
+
+tair.brks <- seq(20, 50, 5) # breaks for the colour scheme
+tair.col <- colorRampPalette(c("blue", "yellow", "red"))(length(tair.brks) - 1) # colour
+
+# Multi-panel plot
+# par(mfrow = c(1,2), mar = c(3,1,3,1), oma = c(1,1,3,1))
+par(mfrow = c(1,1), mar = c(3,1,3,1), oma = c(1,1,3,1))
+# Maximum air temp over the simulation
+plot(max.sub / 10, breaks = tair.brks, col = tair.col, ylab = 'latitude', xlab = 'longitude', axes = F, box = F,
+     main = bquote(bold((a))~"Maximum air temperature"~(120~cm~","~degree*C)), alpha = 1)
+ozmap(x = "country", add = TRUE)
+
+# CTmax over the simulation
+plot(max.sub / 10, breaks = tair.brks, col = tair.col, ylab = 'latitude', xlab = 'longitude', axes = F, box = F, legend = F,
+     main = bquote(atop(bold((b))~"Maximum air temperature"~(120~cm~","~degree*C),
+                        Productivity~probability~("%")~italic(CT["max1h"])~model)), alpha = 0)
+plot(max.sub / 10, zlim = c(20, ctmax.1h), breaks = tair.brks, col = tair.col, 
+     ylab = 'latitude', xlab = 'longitude', add = T, legend = F)
+ozmap(x = "country", add = TRUE)
+
+# Save 2 panel plot as pdf in /Figures
+
+# Multi-panel plot
+par(mfrow = c(2,2), mar = c(3,1,3,1), oma = c(1,1,3,1))
+
+# Rezende model no repair (comparison for repair)
+plot(ct.range, zlim = c(0.5, 1), col = 'grey', ylab = 'latitude', xlab = 'longitude', legend = FALSE, axes = F, box = F,
+     main = bquote(atop(bold((a))~Productivity~probability~("%")~without~repair,~Rezende~italic(et~al.)~dynamic~landscape~model)))
+points(dsuz.results.no.repair0[, 1:2], cex = dsuz.results.no.repair0$surv/120, pch = 16, col = cbp2[6])
+ozmap(x = "country", add = TRUE)
+legend(x = 124, y = -32, legend = paste(seq(20, 100, 20), "%"), pt.cex = seq(20, 100, 20)/120, pch = 16, col = cbp2[6], bty = 'n', ncol = 1)
+
+# Jørgensen model no repair (testing if Rezende and Jørgensen models agree)
+plot(ct.range, zlim = c(0.5, 1), col = 'grey', ylab = 'latitude', xlab = 'longitude', legend = FALSE, axes = F, box = F,
+     main = bquote(atop(bold((b))~Productivity~probability~("%")~without~repair,Jørgensen~italic(et~al.)~dynamic~italic(CT[max])~model)))
+points(repair.dat[, 1:2], cex = repair.dat$j_surv_repair/120, pch = 16, col = cbp2[3])
+ozmap(x = "country", add = TRUE)
+legend(x = 126, y = -32, legend = paste(seq(20, 100, 20), "%"), pt.cex = seq(20, 100, 20)/120, pch = 16, col = cbp2[3], bty = 'n', ncol = 1)
+
+# Rezende model with repair at kdot=0.095
+plot(ct.range, zlim = c(0.5, 1), col = 'grey', ylab = 'latitude', xlab = 'longitude', legend = FALSE, axes = F, box = F,
+     main = bquote(atop(bold((c))~Productivity~probability~("%"),~with~high~repair~rate~model)))
+points(dsuz.results.repair[, 1:2], cex = dsuz.results.repair$surv / 120, pch = 16, col = cbp2[4])
+ozmap(x = "country", add = TRUE)
+legend(x = 124, y = -32, legend = paste(seq(20, 100, 20), "%"), pt.cex = seq(20, 100, 20)/120, pch = 16, col = cbp2[4], bty = 'n', ncol = 1)
+
+# Diff between no repair and repair at 0.095
+dsuz.results.repair$diff <- dsuz.results.repair$surv - dsuz.results.no.repair0$surv
+range(dsuz.results.repair$diff)
+# Find the sites in which survival probability difference is greater than 10%
+max_sites <- dsuz.results.repair[which(dsuz.results.repair$diff > 10),]
+#max_sites
+
+
+plot(ct.range, zlim = c(0.5, 1), col = 'grey', ylab = 'latitude', xlab = 'longitude', legend = FALSE, axes = F, box = F,
+     main = bquote(atop(bold((d))~Productivity~probability~difference~("%"),~with~repair~"-"~without~repair~models)))
+points(dsuz.results.repair[, 1:2], cex = dsuz.results.repair$diff/25, pch = 16, col = cbp2[8])
+ozmap(x = "country", add = TRUE)
+legend(x = 124, y = -32, legend = paste(seq(5, 20, 5), "%"), pt.cex = seq(5, 20, 3)/20, pch = 16, col = cbp2[8], bty = 'n', ncol = 1)
+
+# Save 2 panel plot as pdf in /Figures, approximately 8 x 8 inch
+
+
+```
+
+**Fig. S3.** Maps of Australia showing areas of viable productivity of *Drosophila suzukii* based on different models over the seven-day period used for the simulation. In all maps, the grey background area is based on $CT_{max1h}$ shown in Fig S1b. Circles of different sizes show productivity probability (%), where larger symbols indicate higher probability of producing offspring. Maps are based on **(a)** the dynamic tolerance landscape model without repair (Rezende *et al.,* 2020), in dark blue and **(b)** the dynamic CTmax model without repair (Jørgensen *et al.,* 2021), in light blue; **(c)** the dynamic tolerance landscape model with repair rate (estimated in Box 1 and modelled with damage-repair feedback from Fig. 1), in green. **(d)** Productivity probability difference between models shown in **(a)** and **(c)**, in pink. 
+
+
+We can also identify which locations have the greatest difference in productivity between models with and without repair. 
+
+```{r sites of interest plot}
+#| label: sites of interest plot
+#| echo: true
+#| eval: true
+#| warning: false
+#| message: false
+#| code-fold: true
+par(mfrow = c(1,1), mar = c(3,1,3,1), oma = c(1,1,3,1))
+plot(ct.range, zlim = c(0.5, 1), col = 'grey', ylab = 'latitude', xlab = 'longitude', legend = FALSE, axes = F, box = F,
+     main = bquote(atop(Sites~with~highest~difference~"in"~productivity,~probability~with~and~without~repair)))
+points(max_sites, cex = 0.6, pch = 16, col = cbp2[1])
+ozmap(x = "country", add = TRUE)
+```
+
+
+```{r Spatial summary figures 1}
+#| label: Spatial summary figures 1
+#| echo: true
+#| eval: true
+#| warning: false
+#| message: false
+#| code-fold: true
+
+diff.dat <- repair.dat[,1:2]
+
+diff.dat$r_diff <- repair.dat$r_surv_repair - repair.dat$r_surv_no_repair
+diff.dat$j_diff <- repair.dat$j_surv_repair - repair.dat$j_surv_no_repair
+diff.dat$rj_repair_diff <- repair.dat$r_surv_repair - repair.dat$j_surv_repair
+diff.dat$rj_norepair_diff <- repair.dat$r_surv_no_repair - 
+  repair.dat$j_surv_no_repair
+
+#head(diff.dat)
+
+repair.dat.long <- repair.dat %>% pivot_longer(cols = c("r_surv_repair",
+                                                        "j_surv_repair",
+                                                        "r_surv_no_repair",
+                                                        "j_surv_no_repair"))
+#head(repair.dat.long)
+
+diff.dat.long <- diff.dat %>% 
+  pivot_longer(cols = c("r_diff", "j_diff", 
+                        "rj_repair_diff", "rj_norepair_diff"))
+#head(diff.dat.long)
+
+diff_labels <- c("Jørgensen: with - without repair",
+                 "Rezende: with - without repair",
+                 "Without repair: Rezende - Jørgensen",
+                 "With repair: Rezende - Jørgensen")
+names(diff_labels) <- c("j_diff", "r_diff", "rj_norepair_diff", "rj_repair_diff")
+
+diff.dat.long.sub <- subset(diff.dat.long, 
+                            diff.dat.long$name==c("r_diff", 
+                                                  "rj_norepair_diff"))
+
+diff_all_plot <-
+ggplot(diff.dat.long.sub, aes(x = value, group = name)) +
+  geom_density() + 
+  labs(x = "Difference in productivity probability between models (%)", 
+       y = "Density") +
+  theme_classic() + theme(legend.position = "none") + 
+  facet_wrap(~name, scales = "free",
+             labeller = labeller(name = diff_labels))
+
+model_labels <- c("0-50%", "50-100%")
+names(model_labels) <- c("(-0.1,50]", "(50,100]")
+diff_all_plot
+
+# Count of probability in two panels
+diff_prob_plot <-
+ggplot(repair.dat.long, aes(x = value,
+                            group = name, colour = name)) +
+  geom_density() + 
+  labs(x = "Productivity probability (%)", y = "Density") +
+  scale_colour_manual(values = cbp2[c(3,6,4,7)], name = "Model",
+                      labels = c("Jørgensen without repair",
+                                 "Jørgensen with repair",
+                                 "Rezende without repair",
+                                 "Rezende with repair")) +
+  theme_classic() +
+  theme(legend.position = "inside",
+        legend.position.inside = c(0.3,0.5)) +
+  facet_wrap(~cut(value, breaks = 2), scales = "free") #+
+  # theme(strip.background = element_blank(), strip.text.x = element_blank())
+
+diff_prob_plot
+
+# which(repair.dat$r_surv_repair > 50)
+# which(repair.dat$r_surv_no_repair > 50)
+
+# Or count of probability Model split into quartiles
+ggplot(repair.dat.long, aes(x = value,
+                            group = name, colour = name)) +
+  geom_density() + 
+  labs(x = "Productivity probability (%)", y = "Density") +
+  scale_colour_manual(values = cbp2[c(3,6,4,7)], name = "Model",
+                      labels = c("Jørgensen without repair",
+                                 "Jørgensen with repair",
+                                 "Rezende without repair",
+                                 "Rezende with repair")) +
+  theme_classic() + 
+  facet_wrap(~cut(value, breaks = 4), scales = "free")
+
+# ggsave("Figures/FigS4.pdf", height = 6, width = 8)
+```
+
+**Fig. S4.** Density plots of productivity probability across the grid cells, faceted into quartiles.
+
+```{r Spatial summary figures 2}
+#| label: Spatial summary figures 2
+#| echo: true
+#| eval: false
+#| warning: false
+#| message: false
+#| code-fold: true
+
+# Rezende model with repair
+par(mfrow = c(1,1))
+plot(ct.range, zlim = c(0.5, 1), col = 'grey', ylab = 'latitude', xlab = 'longitude', legend = FALSE, axes = F, box = F,
+     main = bquote(atop(Productivity~probability~("%"),~with~repair~model)))
+points(dsuz.results.repair[, 1:2], cex = dsuz.results.repair$surv / 120, pch = 16, col = cbp2[4])
+ozmap(x = "country", add = TRUE)
+legend(x = 124, y = -32, legend = paste(seq(20, 100, 20), "%"), pt.cex = seq(20, 100, 20)/120, pch = 16, col = cbp2[4], bty = 'n', ncol = 1)
+
+# save as pdf ~ 6 x 6 in
+# par(mfrow = c(1,1))
+# plot.new()
+# plot.new()
+# plot.new()
+# ggarrange(diff_prob_plot, diff_all_plot, align = "v",
+#           ncol = 1, nrow = 2)
+# ggsave("Figures/Box2_figbc.pdf", height = 6, width = 6)
+
+
+```
+
+
+
+```{r Box Fig 2 assembled version}
+#| label: Box Fig 2 assembled version
+#| echo: true
+#| eval: true
+#| warning: false
+#| code-fold: true
+
+image_read(here("Figures", "Box 2 Figfinal.png"))
+
+```
+
+**Box 2 Figure:** **(a)** Spatial map for potential extent for *Drosophila suzukii* to remain productive during a hot week in summer in Australia. **(b)** Density plots of productivity probability across the grid cells and **(c)** of pairwise comparisons between different models with and without repair.
+
+
+The size of the green circles in Box 2 Figure a indicate the probability of females producing offspring based on the dynamic tolerance landscapes model with repair (for maps of each model see Fig. S3). Box 2 Figure b shows the density (proportion of grid cells) of producing offspring according to the four models. This shows that the different models generally behave similarly, while including repair increases the proportion of locations with productivity above 85%. Box 2 Figure c left panel shows that there is relatively little difference between the Rezende and Jørgensen modelling approaches (also shown by: Youngblood *et al.,* 2025), while the right panel shows that there is up to 12% difference in productivity probability when repair is included. The damage accumulated over the seven-day simulation was reduced when we included damage-repair dynamics. Thus, applying the TLS damage-repair model provides a more detailed perspective on the intensity of sublethal heat stress, highlighting geographic areas where persistence of *D. suzukii* may depend on repair processes. Such insights could be used to more effectively identify growing regions that might be susceptible to incursion and population establishment. Our model examples suggest that even during a hot week in summer, female *D. suzukii* could still reproduce in large portions of Australia’s most productive agricultural regions. For example, the predicted distribution of the area where the fly could reach high productivity includes significant areas for growing strawberry in southeast Queensland, and grape and stone fruit growing regions in eastern New South Wales, eastern Victoria, and much of Tasmania.
+
+
+
+## **Additional example of the TDT model: Weed management by solarisation**
+
+The TDT model can already be applied broadly. For example, it can be used to optimise weed management in agriculture where thermal treatments are applied to soil to eradicate weed seeds. Developing strategies to deplete weed seed banks and their germination potential is a grand challenge in agronomic management (Chauhan, 2020). Soil solarisation is a non-chemical approach to biocide that uses passive solar heating under plastic to disinfect soil of crop pests and weeds (Stapleton, 2000). 
+
+As an example of applying the TDT model, we illustrate the relationship between heat exposure over time and seed mortality or germination failure. We extracted $LT_{80}$ (temperature at which 80% of seeds are killed and fail to germinate) data from Dahlquist *et al.* (2007) and used [`metaDigitise`] (Pick *et al.,* 2019) to estimate TDT curves to evaluate thermal sensitivity for three weed species.
+
+```{r Additional weed seed example of TLS data}
+#| label: Additional weed seed example of TLS data
+#| echo: true
+#| eval: true
+#| warning: false
+#| code-fold: true
+
+weeddata <- read.csv("Data/weedseeddata_all.csv") 
+# Data extracted from Dahlquist et al. (2007) Figures using metaDigitise
+# https://doi.org/10.1614/WS-04-178.1 
+
+weeddata$mortality_prop <- weeddata$mortality_percent/100
+weeddata$log10timemin <- log10(weeddata$time_min)
+weeddata$log10timeh <- log10(weeddata$time_h)
+weeddata_sp1 <- subset(weeddata, species=="London rocket")
+
+# Load in extracted dataset that contains LT80 values
+weedLT80 <- read.csv("Data/Weed_LT80.csv")
+weedLT80$log10timemin <- log10(weedLT80$time_min)
+weedLT80$log10timeh <- log10(weedLT80$time_h)
+
+```
+
+
+
+```{r Additional weed seed example of TDT models}
+#| label: Additional weed seed example of TDT models
+#| echo: true
+#| eval: true
+#| warning: false
+#| code-fold: false
+
+# Fit logistic models
+model50 <- glm(mortality_prop ~ log10timeh, 
+             data = weeddata_sp1[weeddata_sp1$temp_treatment=="50",], family = quasibinomial)
+model46 <- glm(mortality_prop ~ log10timeh, 
+             data = weeddata_sp1[weeddata_sp1$temp_treatment=="46",], family = quasibinomial)
+model42 <- glm(mortality_prop ~ log10timeh, 
+             data = weeddata_sp1[weeddata_sp1$temp_treatment=="42",], family = quasibinomial)
+
+# Fit overall and species by species TDT models
+overallLT80_mod <- lm(temp_treatment ~ log10timeh, data = weedLT80)
+
+LT80mod <- lm(temp_treatment ~ log10timeh, data = weedLT80)
+LT80mod_sp3 <- lm(temp_treatment ~ log10timeh, data = subset(weedLT80, weedLT80$Species2=="Black nightshade"))
+LT80mod_sp5 <- lm(temp_treatment ~ log10timeh, data = subset(weedLT80, weedLT80$Species2=="London rocket"))
+LT80mod_sp6 <- lm(temp_treatment ~ log10timeh, data = subset(weedLT80, weedLT80$Species2=="Tumble pigweed"))
+
+# Fit the alternative model form: time ~ temp to apply accumulated damage model
+LT80mod_Orsted <- lm(log10timeh ~ temp_treatment, data = weedLT80)
+LT80mod_Orsted1 <- lm(log10timeh ~ temp_treatment, data = subset(weedLT80, weedLT80$Species2=="Black nightshade"))
+LT80mod_Orsted2 <- lm(log10timeh ~ temp_treatment, data = subset(weedLT80, weedLT80$Species2=="London rocket"))
+LT80mod_Orsted3 <- lm(log10timeh ~ temp_treatment, data = subset(weedLT80, weedLT80$Species2=="Tumble pigweed"))
+
+intercept <- as.numeric(LT80mod_Orsted1$coefficients[1])
+slope <- as.numeric(LT80mod_Orsted1$coefficients[2])
+
+colfunc <- colorRampPalette(c("palegreen","tan4"))
+facet.labs <- c("Solanum nigrum", "Sisymbrium irio", "Amaranthus albus")
+names(facet.labs) <- c("Acc_damage_sp1", "Acc_damage_sp2", "Acc_damage_sp3")
+```
+
+If we then apply a heat treatment where there is a temperature ramp up from ambient to ~50˚C (with variability) and then hold temperature around 50˚C, for 60 h, we can see how damage accumulates for the three species based on their different $CT_{max1h}$ and $z$ values.
+
+```{r Additional weed seed example of TDT models damage sim}
+#| label: Additional weed seed example of TDT models damage sim
+#| echo: true
+#| eval: true
+#| warning: false
+#| code-fold: false
+
+# Simulate 50˚C temperature ramp and hold treatment with thermal variability
+st1 <- c(seq(20,50,2.5),rep(50,100))
+specific_temperatures1 <- st1 + rnorm(st1,0,1)
+Temperature <- specific_temperatures1
+Time <- specific_temperatures1
+Wdata <- data.frame(Time,Temperature)
+Wdata <- Wdata %>% filter(row_number() %% 2 != 1)
+Wdata$Time <- seq(1, nrow(Wdata))
+Wdata$Temperature <- as.numeric(Wdata$Temperature)
+Wdata <- Wdata[1:100,]
+
+# Calculate accumulated damage
+Wdata$Acc_damage_mean <- Acc_function(Wdata$Time,Wdata$Temperature, 
+                                as.numeric(LT80mod_Orsted$coefficients[1]), # intercept
+                                as.numeric(LT80mod_Orsted$coefficients[2])) # slope 
+Wdata$Acc_damage_mean <- as.numeric(Wdata$Acc_damage_mean)
+Wdata$Acc_damage_sp1 <- Acc_function(Wdata$Time,Wdata$Temperature, 
+                                as.numeric(LT80mod_Orsted1$coefficients[1]), # intercept
+                                as.numeric(LT80mod_Orsted1$coefficients[2])) # slope 
+Wdata$Acc_damage_sp2 <- Acc_function(Wdata$Time,Wdata$Temperature, 
+                                as.numeric(LT80mod_Orsted2$coefficients[1]), # intercept
+                                as.numeric(LT80mod_Orsted2$coefficients[2])) # slope 
+Wdata$Acc_damage_sp3 <- Acc_function(Wdata$Time,Wdata$Temperature, 
+                                as.numeric(LT80mod_Orsted3$coefficients[1]), # intercept
+                                as.numeric(LT80mod_Orsted3$coefficients[2])) # slope 
+
+Wdatalong <- Wdata %>% pivot_longer(cols = c(Acc_damage_sp1, Acc_damage_sp2, Acc_damage_sp3), 
+                                  names_to = "Acc_damage")
+Wdatalong <- na.omit(Wdatalong)
+
+```
+
+Next, we can determine the time taken (h) to reach $LT_{80}$ under the active temperature regime, or specifically how many hours at 50˚C is required to reach $LT_{80}$.
+
+```{r Additional weed seed example of TDT results}
+#| label: Additional weed seed example of TDT results
+#| echo: true
+#| eval: true
+#| warning: false
+ 
+preddata <- matrix(data = NA, 51, 3)
+preddata[,2] <- seq(0,5,0.1)
+preddata <- as.data.frame(preddata)
+colnames(preddata) <- c("test", "log10timeh","out")
+
+# CTmax1h temperature (at log10(1))
+predict(LT80mod, as.data.frame(preddata))[1]
+LT80mod$coefficients[[1]] # CTmax1h equivalent
+LT80mod_sp3$coefficients[[1]]
+LT80mod_sp5$coefficients[[1]]
+LT80mod_sp6$coefficients[[1]]
+
+# Find time for LT80 in log10 hours
+uniroot(findInt(model50, 0.8), range(weeddata_sp1$log10timeh))$root
+uniroot(findInt(model46, 0.8), range(weeddata_sp1$log10timeh))$root
+uniroot(findInt(model42, 0.8), range(weeddata_sp1$log10timeh))$root
+
+# Find time for LT80 in hours
+10^(uniroot(findInt(model50, 0.8), range(weeddata_sp1$log10timeh))$root)
+10^(uniroot(findInt(model46, 0.8), range(weeddata_sp1$log10timeh))$root)
+10^(uniroot(findInt(model42, 0.8), range(weeddata_sp1$log10timeh))$root)
+
+# Hours at treatment of 50˚C to reach LT80
+10^(uniroot(findInt(LT80mod, 50), range(weedLT80$log10timeh), extendInt = "yes")$root)     # Average
+10^(uniroot(findInt(LT80mod_sp3, 50), range(weedLT80$log10timeh), extendInt = "yes")$root) # Black nightshade
+10^(uniroot(findInt(LT80mod_sp5, 50), range(weedLT80$log10timeh), extendInt = "yes")$root) # London rocket
+10^(uniroot(findInt(LT80mod_sp6, 50), range(weedLT80$log10timeh), extendInt = "yes")$root) # Tumble pigweed
+
+```
+
+The proportion of seed mortality in *Sisymbrium irio* (London rocket) is strongly dependent on both temperature and time (Fig. S5a). To achieve 80% seed mortality at 42°C requires about 85 h of cumulative heat treatment, whereas, at around 50°C, this time required reduces drastically to 4 h. Applying the TDT model to three weed species predicts that, on average, treatment temperatures need to reach 57°C for at least 1 h for seed mortality to reach $LT_{80}$ (Fig. S5b). Seed mortality has the same qualitative response to thermal dosage but there are interspecific differences in critical thermal maximum at 1 h ($CT_{max1h}$) and thermal sensitivity ($z$) resulting from differences among species (Fig. S5b). If we simulate a heat treatment ramping to approximately 50°C, then it would need to be maintained for 20 h on average to eradicate 80% of all seeds, but each species requires very different thermal dosages to accumulate the target (‘100% damage’), which here actually refers to reaching $LT_{80}$ (Fig. S5c). Damage accumulates at different rates based on both $CT_{max1h}$ and $z$: *S. irio* seeds reach $LT_{80}$ by the treatment after 10 h of treatment, while *Solanum nigrum* (black nightshade) seeds reach $LT_{80}$ after 27 h, and *Amaranthus albus* (tumble pigweed) do not reach $LT_{80}$ even after 30 h of heat treatment (Fig. S5d). While *A. albus* has higher $CT_{max1h}$ than *S. nigrum*, the greater sensitivity $z$ of *S. nigrum* (Fig. S5b) results in slower damage accumulation under the treatment regime (Fig. S5c,d). The effectiveness of solarisation techniques therefore relies heavily on the thermal dosage being applied at the necessary intensity and duration.
+
+
+```{r Fig S5 - Weed thermal death time example, fig.width=10, fig.height=10}
+#| label: Additional weed seed example of TLS models
+#| echo: true
+#| eval: true
+#| warning: false
+#| code-fold: true
+
+# LT80 for london rocket seeds
+figS5a <- 
+ggplot(data = weeddata_sp1, aes(y = mortality_prop, x = log10timeh)) +
+  geom_point(aes(colour = as.factor(temp_treatment)), alpha = 0.4) +
+  geom_smooth(aes(colour = as.factor(temp_treatment), fill = as.factor(temp_treatment)), 
+              method = "glm", formula = y ~ x,
+    method.args = list(family = "quasibinomial"), se = T, fullrange = T) +
+  geom_hline(yintercept = 0.8, lty = 2) +
+  geom_segment(x = 1.929779, xend = 1.929779, y = 0.8, yend = -Inf, lty = 2) + # 42
+  geom_segment(x = 1.305468, xend = 1.305468, y = 0.8, yend = -Inf, lty = 2) + # 46
+  geom_segment(x = 0.60383, xend = 0.60383, y = 0.8, yend = -Inf, lty = 2) + # 50
+  scale_colour_manual(values = c("goldenrod1", "darkorange2", "red3"), "Temperature (°C)") +
+  scale_fill_manual(values = c("goldenrod1", "darkorange2", "red3"), "Temperature (°C)") +
+  annotate("text", x = 0.4, y = 1.1, label = bquote(italic(Sisymbrium~irio))) +
+  # annotate("text", x = 0.4, y = 0.58, label = "50°C") +
+  # annotate("text", x = 1.1, y = 0.58, label = "46°C") +
+  # annotate("text", x = 1.7, y = 0.58, label = "42°C") +
+  annotate("text", x = 0, y = 0.75, label = bquote(italic(LT)[80])) +
+  annotate("text", x = 2.5, y = 0.75, label = bquote(italic(LT)[80])) +
+  labs(y = "Seed mortality (proportion)", x = bquote(log[10]~Time~(h))) +
+  scale_x_continuous(limits = c(-0.4,3)) +
+  scale_y_continuous(limits = c(0,1.2), breaks = c(0,0.2,0.4,0.6,0.8,1)) +
+  theme_classic() + theme(legend.position = "bottom", legend.box = "vertical")
+
+
+# TDT models fit to 3 weed species and overall, CTmax' and z
+
+figS5b <-
+ggplot(data = weedLT80, aes(y = temp_treatment, x = log10(time_h), 
+                                  group = Species, fill = Species, shape = Species)) +
+  geom_abline(intercept = LT80mod_sp3$coefficients[1], slope = LT80mod_sp3$coefficients[2], 
+              colour = cbp2[6], lty = 1, linewidth = 1) + # black_nightshade, solanum nigrum
+  geom_abline(intercept = LT80mod_sp5$coefficients[1], slope = LT80mod_sp5$coefficients[2], 
+              colour = cbp2[4], lty = 1, linewidth = 1) + # london_rocket, sisymbrium irio
+  geom_abline(intercept = LT80mod_sp6$coefficients[1], slope = LT80mod_sp6$coefficients[2], 
+              colour = cbp2[8], lty = 1, linewidth = 1) + # tumble_pigweed, amaranthus albus
+  geom_point(size = 3) +
+  geom_vline(xintercept = 0, lty = 2) +
+  scale_fill_manual(values = c(cbp2[6], cbp2[4], cbp2[8], cbp2[1]), name = "",
+                     labels = c(bquote(italic(Solanum~nigrum)), 
+                                bquote(italic(Sisymbrium~irio)), 
+                                bquote(italic(Amaranthus~albus)))) +
+  scale_shape_manual(values = c(22,23,24), name = "",
+                     labels = c(bquote(italic(Solanum~nigrum)), 
+                                bquote(italic(Sisymbrium~irio)), 
+                                bquote(italic(Amaranthus~albus)))) +
+  annotate("text", x = 0.2, y = 60, label = bquote(italic(CT[max1h])~"="~intercept), hjust = 0) +
+  annotate("text", x = 1.6, y = 54, label = bquote(italic(z)~"="~slope)) +
+  annotate("text", x = 0.05, y = 63, label = bquote(italic(LT)[80]~TDT~curve), hjust = 0) +
+  annotate("text", x = 0.05, y = 42.5, label = bquote(italic(CT[max1h])~"="~"60.1°C"), colour = cbp2[6], hjust = 0) +
+  annotate("text", x = 0.05, y = 41, label = bquote(italic(CT[max1h])~"="~"53.5°C"), colour = cbp2[4], hjust = 0) +
+  annotate("text", x = 0.05, y = 39.5, label = bquote(italic(CT[max1h])~"="~"59.3°C"), colour = cbp2[8], hjust = 0) +
+  annotate("text", x = 0.05, y = 38, label = bquote(italic(z)==-6.534), colour = cbp2[6], hjust = 0) +
+  annotate("text", x = 0.05, y = 36.5, label = bquote(italic(z)==-6.087), colour = cbp2[4], hjust = 0) +
+  annotate("text", x = 0.05, y = 35, label = bquote(italic(z)==-5.205), colour = cbp2[8], hjust = 0) +
+  scale_x_continuous(limits = c(-0.2,3)) +
+  scale_y_continuous(limits = c(35,65), breaks = c(35,40,45,50,55,60,65)) +
+  labs(y = bquote(Temperature~(degree*C)), x = bquote(log[10]~Time~(h))) +
+  theme_classic() + theme(legend.position = "bottom")
+
+
+# Damage accumulation model applied to 3 species over temperature-time treatment simulation
+
+figS5c <- 
+ggplot(Wdatalong, aes(x = Time, y = Temperature)) +
+  facet_wrap(~Acc_damage, nrow = 3, labeller = labeller(Acc_damage = facet.labs)) +
+  geom_line() +
+  geom_point(data = Wdatalong, aes(x = Time, y = Temperature, fill = value),
+             shape = 21, size = 1.5, alpha = 1) +
+  scale_fill_gradientn("Damage (%)", colours = colfunc(21), limits = c(0,100)) +
+  labs(x = "Time (h)", y = bquote(Temperature~(degree*C))) +
+  scale_x_continuous(limits = c(0,60), breaks = c(0,10,20,30,40,50)) +
+  ylim(20,55) +  
+  theme_classic() + 
+  theme(legend.position = "right", strip.background = element_blank(),
+        strip.text = element_text(face = "italic"))
+
+  
+# Damage accumulation model applied to 3 species over temperature-time treatment simulation
+
+figS5d <- 
+  ggplot(Wdata, aes(x = Time, y = Acc_damage_mean)) +
+  geom_line(data = Wdata, aes(x = Time, y = Acc_damage_sp1, colour = cbp2[6]), linewidth = 1) +
+  geom_line(data = Wdata, aes(x = Time, y = Acc_damage_sp2, colour = cbp2[4]), linewidth = 1) +
+  geom_line(data = Wdata, aes(x = Time, y = Acc_damage_sp3, colour = cbp2[8]), linewidth = 1) +
+  scale_fill_manual(values = c(cbp2[6], cbp2[4], cbp2[8]), name = "",
+                     labels = c(bquote(italic(Solanum~nigrum)), 
+                                bquote(italic(Sisymbrium~irio)), 
+                                bquote(italic(Amaranthus~albus)))) +
+  scale_colour_manual(values = c(cbp2[6], cbp2[4], cbp2[8]), name = "",
+                     labels = c(bquote(italic(Solanum~nigrum)), 
+                                bquote(italic(Sisymbrium~irio)), 
+                                bquote(italic(Amaranthus~albus)))) +
+  scale_y_continuous(limits = c(0,110), breaks = c(0,25,50,75,100)) +
+  scale_x_continuous(limits = c(0,60), breaks = c(0,10,20,30,40,50)) +
+  geom_hline(yintercept = 100, linetype = "dashed") +
+  labs(x = "Time (h)", y = expression(paste("Accumulated damage"," (%)"))) +
+  theme_classic() + theme(legend.position = "none")
+
+
+
+ggarrange(figS5a, figS5b, figS5c, figS5d,
+          nrow = 2, ncol = 2, align = "v", labels = c("(a)", "(b)", "(c)", "(d)"))
+
+#ggsave("Figures/FigS5.pdf", height = 8.5, width = 10)
+
+```
+
+**Figure S5.** Conceptual and practical application of the Thermal Death Time (TDT) model to seed mortality. **(a)** Experiments measure seed mortality (as % not germinating after heat stress application) for varying amounts of time and across a range of temperature treatments. A dose-response curve can be estimated for each temperature via logistic regression. Fitted response curves to estimate $LT_{80}$ (time for 80% mortality) of an example weed species taken from Dahlquist *et al.* (2007). **(b)** Biologically relevant thresholds, such as $LT_{80}$, that are derived from **(a)** are then used to estimate a TDT curve for three weed species that differ in their thermal ecology. A linear regression between temperature (*y*-axis) and $log_{10}$ Time (h) to event (in this case $LT_{80}$, *x*-axis) data is then used to estimate the $CT_{max1h}$ (intercept of TDT curve) and thermal sensitivity $z$ (slope of the TDT curve). **(c)** Simulating a ramping temperature profile for an approximate 50°C heat solarisation treatment for 120 h and applying the damage model predicts how accumulating damage could differ by species. **(d)** As temperature slowly increases to approximately 50˚C, damage accumulates towards $LT_{80}$ at different rates depending on species thermal sensitivity. 
+
+## **Applying the TLS framework: Weed management by solarisation**
+
+Different threshold values can be used for estimating the effects of thermal damage. As an example, 10%, 50% and 90% mortality could be useful to understand the efficacy of a treatment. We apply the TDT models for two species across a natural cyclic temperature regime that reaches high temperatures during the day, but cools overnight, potentially allowing for repair of damage.  
+
+```{r Weed seed TLS setup}
+#| label: Weed seed TLS setup
+#| echo: true
+#| eval: true
+#| warning: false
+#| code-fold: true
+
+# Fit logistic models for species, temperatures, and values of proportion mortality (10%, 50%, 90%)
+species <- c("Black nightshade", "London rocket")
+temps <- c(50,46,42)
+r <- c(0.1,0.5,0.9)
+
+est <- matrix(NA, nrow = length(temps), ncol = 5)
+est_sp <- list()
+
+for (i in 1:length(species)) {
+  d <- weeddata[weeddata$species==species[i],]
+  
+  for (k in 1:length(temps)) {
+    d2 <- d[d$temp_treatment==temps[k],]
+    mod <- glm(mortality_prop ~ log10timeh, 
+               data = d2, family = quasibinomial)
+    
+    for (j in 1:length(r)) {
+      m <- uniroot(findInt(mod, r[j]), range(d2$log10timeh), 
+                   extendInt = "yes")$root # uniroot solve prediction for log10 time
+      est[k,j] <- m
+      est[k,4] <- temps[k]
+      est[k,5] <- species[i]
+    }
+  }
+  est_sp[[i]] <- est
+}
+
+# Compile and format derived dataset
+estimated <- do.call(rbind.data.frame, est_sp)
+names(estimated) <- c("t10", "t50", "t90", "temp_treatment", "species")
+estimated[,1:3] <- sapply(estimated[,1:3], as.numeric)
+estimated[,4] <- sapply(estimated[,4], as.integer)
+estimated[,5] <- sapply(estimated[,5], as.factor)
+#str(estimated)
+
+lm_out <- matrix(NA, nrow = length(r), ncol = 6)
+lm_out_sp <- list()
+
+# Fit linear models to derived values
+for (i in 1:length(species)) {
+  d <- estimated[estimated$species==species[i],]
+  
+  for (j in 1:length(r)) {
+    time <- d[,j]
+    temp <- d[,4]
+    lmod <- lm(temp ~ time, data = d)
+    omod <- lm(time ~ temp, data = d)
+    lm_out[j,1] <- lmod$coefficients[[1]]
+    lm_out[j,2] <- lmod$coefficients[[2]]
+    lm_out[j,3] <- omod$coefficients[[1]]
+    lm_out[j,4] <- omod$coefficients[[2]]
+    lm_out[j,5] <- r[j]
+    lm_out[j,6] <- species[i]
+  }
+  lm_out_sp[[i]] <- lm_out
+}
+
+
+lm_out_dat <- do.call(rbind.data.frame, lm_out_sp)
+names(lm_out_dat) <- c("CTmax", "z", "O_int", "O_slope", "r", "species")
+lm_out_dat[,1:5] <- sapply(lm_out_dat[,1:5], as.numeric)
+lm_out_dat[,6] <- sapply(lm_out_dat[,6], as.factor)
+#str(lm_out_dat)
+
+
+```
+
+Finally, we can add in a simple version of the Arrhenius repair function to allow the accumulated damage to be reduced when temperatures permit repair to occur. In reality, it may be unlikely for a seed to repair damage inflicted by high temperatures, however in this example, we use a relatively high value of $\dot k$ purely for illustrative purposes.
+
+```{r Weed seed TLS damage plots, fig.width=9, fig.height=12}
+#| label: Weed seed TLS damage plots
+#| echo: true
+#| eval: true
+#| warning: false
+#| code-fold: true
+
+est_nolog_plot <- 
+  ggplot(data = estimated, aes(y = temp_treatment, x = 10^t10, 
+                               group = species, shape = species)) +
+  geom_line(aes(y = temp_treatment, x = 10^t10, colour = species, alpha = 0.3), stat = "smooth", 
+            method = "lm", formula = y ~ log10(x), se = F, fullrange = T, size = 1) +
+  geom_line(aes(y = temp_treatment, x = 10^t50, colour = species, alpha = 0.6), stat = "smooth", 
+            method = "lm", formula = y ~ log10(x), se = F, fullrange = T, size = 1) +
+  geom_line(aes(y = temp_treatment, x = 10^t90, colour = species, alpha = 0.9), stat = "smooth", 
+            method = "lm", formula = y ~ log10(x), se = F, fullrange = T, size = 1) +
+  scale_colour_manual(values = c(cbp2[6], cbp2[4]), name = "Species",
+                      labels = c(bquote(italic(Solanum~nigrum)), 
+                                 bquote(italic(Sisymbrium~irio)))) +
+  scale_alpha_continuous(breaks = c(0.9,0.6,0.3), name = "Threshold",
+                         labels = c(expression(italic(LT)[90]), expression(italic(LT)[50]),
+                                    expression(italic(LT)[10]))) +
+  scale_x_continuous(limits = c(1,350), expand = c(0,0)) +
+  scale_y_continuous(limits = c(34,70), breaks = c(40,50,60,70)) +
+  labs(y = bquote(Temperature~(degree*C)), x = "Time (h)") +
+  theme_classic() + 
+  theme(legend.position = "none")
+
+
+est_log_plot <- 
+  ggplot(data = estimated, aes(y = temp_treatment, x = t10, 
+                               group = species, shape = species)) +
+  geom_line(aes(y = temp_treatment, x = t10, colour = species, alpha = 0.3), stat = "smooth", 
+            method = "lm", formula = y ~ x, se = F, fullrange = T,  size = 1) +
+  geom_line(aes(y = temp_treatment, x = t50, colour = species, alpha = 0.6), stat = "smooth", 
+            method = "lm", formula = y ~ x, se = F, fullrange = T, size = 1) +
+  geom_line(aes(y = temp_treatment, x = t90, colour = species, alpha = 0.9), stat = "smooth", 
+            method = "lm", formula = y ~ x, se = F, fullrange = T, size = 1) +
+  scale_colour_manual(values = c(cbp2[6], cbp2[4]), name = "Species",
+                      labels = c(bquote(italic(Solanum~nigrum)), 
+                                 bquote(italic(Sisymbrium~irio)))) +
+  scale_alpha_continuous(breaks = c(0.9,0.6,0.3), name = "Threshold",
+                         labels = c(expression(italic(LT)[90]), expression(italic(LT)[50]),
+                                    expression(italic(LT)[10]))) +
+  scale_x_continuous(expand = c(0,0)) +
+  labs(y = bquote(Temperature~(degree*C)), x = bquote(log[10]~Time~(h))) +
+  theme_classic() + 
+  theme(legend.position = "bottom")
+
+colfunc <- colorRampPalette(c("palegreen","tan4"))
+facet.labs <- c("Solanum nigrum", "Sisymbrium irio")
+names(facet.labs) <- c("sp1_0.9", "sp2_0.9")
+
+# Simulate soil temperature cycles over 120 hours, based on soil temperatures from NicheMapR 
+# (+ x˚C to simulate plausible solarisation treatment effect)
+st <- read.csv("ectotherm.csv")[3850 + 1:(24*5),] # subset ectotherm - derived from NicheMapR
+hours <- seq(1:nrow(st))
+data <- data.frame(hours, st$TSUB + 5)
+names(data) <- c( "Time", "Tsoil")
+
+# set parameters
+ctmax.1h <- (log10(60) - lm_out_dat$O_int) / lm_out_dat$O_slope # 60 to convert 1h to minutes
+k <- log(10) / (-(1/lm_out_dat$O_slope))
+
+
+Ld <- 100 # max lethal dose
+L <- matrix(0, nrow = length(data$Tsoil), ncol = length(ctmax.1h))
+
+for (j in 1:length(ctmax.1h)) {
+  for(i in 2:length(data$Tsoil)) {
+    L[1] <- 0
+    if(L[i-1,j] < Ld) {
+      if(data$Tsoil[i] > ctmax.1h[j]) {
+        dLdt <- exp(k * (data$Tsoil[i-1] - ctmax.1h) - 1)
+      }else{
+        dLdt <- 0
+      }
+      repaired <- 0 # no repair
+      L[i,j] <- max(0, L[i-1,j] + dLdt - repaired / 100 * Ld)
+      if(L[i,j] >= Ld){
+        L[i,j] <- Ld
+      }
+    } else{L[i,j] <- Ld}
+  }
+}
+
+
+Ldat <- data.frame(L)
+colnames(Ldat) <- c("LT10_S.nigrum", "LT50_S.nigrum", "LT90_S.nigrum",
+                 "LT10_S.irio", "LT50_S.irio", "LT90_S.irio")
+Ldata <- cbind(Ldat, data)
+Ldatalong <- Ldata %>% pivot_longer(cols = colnames(Ldata[,1:6]),
+                                  names_to = "Acc_damage")
+
+tsoil_acc_dam_plot <- 
+  ggplot(Ldatalong, aes(x = Time, y = Tsoil, colour = value)) +
+  facet_wrap(~Acc_damage, nrow = 3, labeller = labeller(Acc_damage = facet.labs)) +
+  geom_line(linewidth = 1) +
+  scale_colour_gradientn(bquote(Damage~("%"~of~italic(LT)[90])), colours = colfunc(21), limits = c(0,100)) +
+  geom_point(data = Ldatalong, aes(x = Time, y = Tsoil, fill = value),
+             shape = 21, size = 1.5, alpha = 1) +
+  scale_fill_gradientn(bquote(Damage~("%"~of~italic(LT)[90])),
+                       colours = colfunc(21), limits = c(0,100)) +
+  ggtitle("No repair") +
+  labs(x = "Time (h)", y = bquote(Temperature~(degree*C))) +
+  scale_x_continuous(limits = c(0,125), breaks = c(0,24,48,72,96,120)) +
+  theme_classic() + 
+  theme(legend.position = "none", strip.background = element_blank(),
+        strip.text = element_text(face = "italic"))
+
+acc_dam_plot <- 
+  ggplot(Ldata, aes(x = Time)) +
+  geom_line(aes(x = Time, y = LT90_S.nigrum, colour = cbp2[6]), linewidth = 1) +
+  geom_line(aes(x = Time, y = LT90_S.irio, colour = cbp2[4]), linewidth = 1) +
+  geom_line(aes(x = Time, y = LT10_S.nigrum, colour = cbp2[6]), linewidth = 1, alpha = 0.3) +
+  geom_line(aes(x = Time, y = LT10_S.irio, colour = cbp2[4]), linewidth = 1, alpha = 0.3) +
+  geom_line(aes(x = Time, y = LT50_S.nigrum, colour = cbp2[6]), linewidth = 1, alpha = 0.5) +
+  geom_line(aes(x = Time, y = LT50_S.irio, colour = cbp2[4]), linewidth = 1, alpha = 0.5) +
+  ggtitle("No repair") +
+  scale_colour_manual(values = c(cbp2[6], cbp2[4]), name = "Species",
+                      labels = c(bquote(italic(Solanum~nigrum)), 
+                                 bquote(italic(Sisymbrium~irio)))) +
+  scale_y_continuous(limits = c(0,110), breaks = c(0,25,50,75,100)) +
+  scale_x_continuous(limits = c(0,125), breaks = c(0,24,48,72,96,120)) +
+  geom_hline(yintercept = 100, linetype = "dashed") +
+  labs(x = "Time (h)", y = bquote(atop(Accumulated~damage,~("%"~of~threshold)))) +
+  theme_classic() + theme(legend.position = "none")
+
+# With repair
+repair <- ArrFunc5(seq(1,60), TA, TAL, TAH, TL, TH, TREF, kdot_ref = 1)
+
+Ld <- 100 # max lethal dose
+L <- matrix(0, nrow = length(data$Tsoil), ncol = length(ctmax.1h))
+
+for (j in 1:length(ctmax.1h)) {
+  for(i in 2:length(data$Tsoil)) {
+    L[1] <- 0
+    if(L[i-1,j] < Ld) {
+      if(data$Tsoil[i] > ctmax.1h[j]) {
+        dLdt <- exp(k * (data$Tsoil[i-1] - ctmax.1h) - 1)
+      }else{
+        dLdt <- 0
+      }
+      repaired <- repair[data$Tsoil[i-1]] # add repair as a function of temperature
+      L[i,j] <- max(0, L[i-1,j] + dLdt - repaired / 100 * Ld)
+      if(L[i,j] >= Ld){
+        L[i,j] <- Ld
+      }
+    } else{L[i,j] <- Ld}
+  }
+}
+
+
+Ldat <- data.frame(L)
+colnames(Ldat) <- c("LT10_S.nigrum", "LT50_S.nigrum", "LT90_S.nigrum",
+                 "LT10_S.irio", "LT50_S.irio", "LT90_S.irio")
+Ldat2 <- cbind(Ldat, data)
+Ldat2long <- Ldat2 %>% pivot_longer(cols = colnames(Ldat2[,1:6]),
+                                  names_to = "Acc_damage")
+
+
+tsoil_acc_dam_plot2 <- 
+  ggplot(Ldat2long, aes(x = Time, y = Tsoil, colour = value)) +
+  facet_wrap(~Acc_damage, nrow = 3) +
+  geom_line(linewidth = 1) +
+  scale_colour_gradientn(bquote(Damage~("%"~of~threshold)), colours = colfunc(21), limits = c(0,100)) +
+  geom_point(data = Ldat2long, aes(x = Time, y = Tsoil, fill = value),
+             shape = 21, size = 1.5, alpha = 1) +
+  scale_fill_gradientn(bquote(Damage~("%"~of~threshold)),
+                       colours = colfunc(21), limits = c(0,100)) +
+  scale_x_continuous(limits = c(0,125), breaks = c(0,24,48,72,96,120)) +
+  ggtitle("With repair") +
+  labs(x = "Time (h)", y = bquote(Temperature~(degree*C))) +
+  theme_classic() + 
+  theme(legend.position = "none", strip.background = element_blank(),
+        strip.text = element_text(face = "italic"))
+
+acc_dam_plot2 <- 
+  ggplot(Ldat2, aes(x = Time)) +
+  geom_line(aes(x = Time, y = LT90_S.nigrum, colour = cbp2[6]), linewidth = 1) +
+  geom_line(aes(x = Time, y = LT90_S.irio, colour = cbp2[4]), linewidth = 1) +
+  geom_line(aes(x = Time, y = LT10_S.nigrum, colour = cbp2[6]), linewidth = 1, alpha = 0.3) +
+  geom_line(aes(x = Time, y = LT10_S.irio, colour = cbp2[4]), linewidth = 1, alpha = 0.3) +
+  geom_line(aes(x = Time, y = LT50_S.nigrum, colour = cbp2[6]), linewidth = 1, alpha = 0.5) +
+  geom_line(aes(x = Time, y = LT50_S.irio, colour = cbp2[4]), linewidth = 1, alpha = 0.5) +
+  ggtitle("With repair") +
+  scale_colour_manual(values = c(cbp2[6], cbp2[4]), name = "Species",
+                      labels = c(bquote(italic(Solanum~nigrum)), 
+                                 bquote(italic(Sisymbrium~irio)))) +
+  scale_y_continuous(limits = c(0,110), breaks = c(0,25,50,75,100)) +
+  scale_x_continuous(limits = c(0,125), breaks = c(0,24,48,72,96,120)) +
+  geom_hline(yintercept = 100, linetype = "dashed") +
+  labs(x = "Time (h)", y = bquote(atop(Accumulated~damage,~("%"~of~threshold)))) +
+  theme_classic() + theme(legend.position = "none")
+
+
+ggarrange(est_nolog_plot, est_log_plot,tsoil_acc_dam_plot, 
+          acc_dam_plot, tsoil_acc_dam_plot2, acc_dam_plot2,
+          ncol = 2, nrow = 3, legend = "bottom", common.legend = TRUE,
+          labels = c("(a)", "(b)", "(c)", "(d)", "(e)", "(f)"))
+          
+#ggsave("Figures/FigS6.pdf", height = 12, width = 9)
+
+```    
+
+
+**Figure S6.** Conceptual and practical application of the Thermal Load Sensitivity (TLS) framework to seed mortality, including a basic repair function, using TDT estimates derived from dose-response curves in Fig. S5, this time using fitted response curves to estimate three thresholds: $LT_{10}$, $LT_{50}$, and $LT_{90}$ (time for 10%, 50%, and 90% mortality, respectively) of two weed species (*Solanum nigrum* and *Sisymbrium irio*) from Dahlquist *et al.* (2007). **(a)** Relationship between temperature (*y*-axis) and time (h, *x*-axis) to reach the three thresholds. **(b)** Log-linear relationship between temperature (*y*-axis) and $log_{10}$ Time (h, *x*-axis) to reach the three thresholds. **(c)** Simulating a dynamic, cyclic temperature profile for 120 h and applying the damage model predicts how accumulating damage could differ by species. **(d)** Accumulated damage rate over time differs between species depending on thermal sensitivity, and depending on the threshold used. **(e)** Simulating the same temperature profile for 120 h and applying the damage model predicts how accumulating damage could differ by species and threshold, while repair is allowed to reduce damage that has accumulated. **(f)** Accumulated damage over time differs between species depending on thermal sensitivity, the threshold used, and damage is ameliorated by repair occurring during temperatures that are not stressful.
+
