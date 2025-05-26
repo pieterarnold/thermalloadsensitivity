@@ -327,7 +327,7 @@ kdot_ref <- 0.02 # repair rate % per minute at ref temp 20 deg C
 
 # Load ectotherm model data and subset to example four week period
 par(mfrow = c(1,1))
-ta <- read.csv("ectotherm.csv")[3006 + 1:(24*28),] # subset ectotherm - derived from NicheMapR
+ta <- read.csv("Data/ectotherm.csv")[3006 + 1:(24*28),] # subset ectotherm - derived from NicheMapR
 ta <- ta$TC + 0.3 # Body temperature simulation
 #plot(ta, type = "l")
 time.min <- spline(ta, n = length(ta-1)*60)$x	
@@ -1079,7 +1079,7 @@ Using a six-day simulation of realistic body temperatures (that ranged 6-34˚C; 
 
 # 'ectotherm' - derived from NicheMapR - to get body temperatures for a small ectotherm otherwise using default settings
 # subset to a 6 day window. Values chosen for illustrative purposes only.
-st <- read.csv("ectotherm.csv")[2410 + 1:((24*6.1)-1),] 
+st <- read.csv("Data/ectotherm.csv")[2410 + 1:((24*6.1)-1),] 
 hours <- seq(1:nrow(st))
 dat <- data.frame(hours, st$TC+1)
 names(dat) <- c( "Time", "Temp")
@@ -1345,7 +1345,7 @@ $$
 # Generate tolerance landscape for parameterising models
 # Drosophila suzukii
 
-data <- read.csv("Dsuzukii_data_Orsted2024.csv")
+data <- read.csv("Data/Dsuzukii_data_Orsted2024.csv")
 #head(data)
 
 tl <- tolerance.landscape(data$temp, data$time)
@@ -1497,7 +1497,7 @@ kdot_ref <- 0 ### change to modify repair rate
 
 for(ii in 1:nrow(sites)){ # start site loop
   loc <- c(sites[ii, 1], sites[ii, 2])
-  tair.120cm_loc <- extract.nc("TA120cm_2017_time.nc", loc)[(DOY * 24 + 1):(DOY * 24 + sim.length * 24), ]
+  tair.120cm_loc <- extract.nc("Data/TA120cm_2017_time.nc", loc)[(DOY * 24 + 1):(DOY * 24 + sim.length * 24), ]
   if(!is.na(tair.120cm_loc$data[1])){ # check if land or sea
     if(is.na(all.results[ii, 1])){
       variable.temp <- tair.120cm_loc$data / 10
@@ -2322,7 +2322,7 @@ names(facet.labs) <- c("sp1_0.9", "sp2_0.9")
 
 # Simulate soil temperature cycles over 120 hours, based on soil temperatures from NicheMapR 
 # (+ x˚C to simulate plausible solarisation treatment effect)
-st <- read.csv("ectotherm.csv")[3850 + 1:(24*5),] # subset ectotherm - derived from NicheMapR
+st <- read.csv("Data/ectotherm.csv")[3850 + 1:(24*5),] # subset ectotherm - derived from NicheMapR
 hours <- seq(1:nrow(st))
 data <- data.frame(hours, st$TSUB + 5)
 names(data) <- c( "Time", "Tsoil")
