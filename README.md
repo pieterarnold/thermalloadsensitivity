@@ -1,11 +1,11 @@
 # thermalloadsensitivity
-The Thermal Load Sensitivity (TLS) framework builds on the Thermal Death Time (TDT) model, which integrates the magnitude and duration of stress, to now explore how accumulation of damage and subsequent recovery influences whole-organism responses to thermal stress across taxonomic groups
+The Thermal Load Sensitivity (TLS) framework builds on the Thermal Death Time (TDT) model, which integrates the magnitude and duration of stress, to now explore how accumulation of damage and subsequent recovery influences whole-organism responses to thermal stress across taxonomic groups. This repository contains the functions, data, figures, and code (via Quatro markdown) that supports a manuscript presenting this framework with simulation and data based examples.
  
 # Functions
 - Damage accumulation function Faber, Ørsted, Ehlers (2024) https://doi.org/10.1093/jxb/erae096 
 - Repair function ArrFunc5 by Michael Kearney  
 - tolerance.landscape function by Enrico Rezende
-- dynamic.landscape1 to allow repair with dynamic thermal tolerance landscape function by Enrico Rezende, Michael Kearney
+- dynamic.landscape by Enrico Rezende
 - dynamic.landscape2 to allow repair and damage-repair feedback with dynamic thermal tolerance landscape function by Enrico Rezende, Michael Kearney, Pieter Arnold
 - extract.nc function to extract data from netcdf files by Michael Kearney
 
@@ -15,3 +15,6 @@ The Thermal Load Sensitivity (TLS) framework builds on the Thermal Death Time (T
 - Climate data from Penrith and crown dieback by Renee Marchin
 - Drosophila suzukii data from Ørsted et al. (2024) https://doi.org/10.1111/ele.14421
 - TA120cm_2017_time nc file for Australia from NicheMapR by Michael Kearney
+
+# Abstract
+Forecasts of vulnerability to climate warming require an integrative understanding of how species are exposed to, are damaged by, and recover from thermal stress in natural environments. The sensitivity of species to temperature depends on the frequency, duration, and magnitude of thermal stress. Thus, there is a generally recognised need to move beyond physiological metrics based solely on critical thermal limits and integrate them with natural heat exposure regimes. Here we propose the Thermal Load Sensitivity (TLS) framework, which integrates biophysical principles for quantifying exposure with physiological principles of the dynamics of damage and repair processes in driving sublethal impacts on organisms. Building upon the established Thermal Death Time (TDT) model, which integrates both the magnitude and duration of stress, the TLS framework attempts to disentangle accumulation of damage and subsequent repair processes that alter responses to thermal stress. With the aid of case studies and reproducible simulation examples, we discuss how the TLS framework can be applied to enhance our understanding of the ecology and evolution of heat stress responses. These include assessing thermal sensitivity across diverse taxonomic groups, throughout ontogeny, and for modular organisms, as well as integrating additional stressors in combination with temperature. We identify critical research opportunities, knowledge gaps, and new ways of integrating physiological measures of thermal sensitivity to improve forecasts of thermal vulnerability.
