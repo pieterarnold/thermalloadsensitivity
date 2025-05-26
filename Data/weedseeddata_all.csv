@@ -1,0 +1,558 @@
+temp_treatment,time_h,time_min,mortality_percent,group,col,pch,y_variable,x_variable,figure,species
+42,25.86912065,1552.147239,3.134796238,3,purple,19,mortality_percent,time_h,1,Annual sowthistle
+42,23.16973415,1390.184049,12.85266458,3,purple,19,mortality_percent,time_h,1,Annual sowthistle
+42,22.94478528,1376.687117,18.80877743,3,purple,19,mortality_percent,time_h,1,Annual sowthistle
+42,26.3190184,1579.141104,20.37617555,3,purple,19,mortality_percent,time_h,1,Annual sowthistle
+42,26.09406953,1565.644172,28.21316614,3,purple,19,mortality_percent,time_h,1,Annual sowthistle
+42,25.86912065,1552.147239,29.78056426,3,purple,19,mortality_percent,time_h,1,Annual sowthistle
+42,23.16973415,1390.184049,26.64576803,3,purple,19,mortality_percent,time_h,1,Annual sowthistle
+42,22.7198364,1363.190184,35.42319749,3,purple,19,mortality_percent,time_h,1,Annual sowthistle
+42,26.3190184,1579.141104,36.36363636,3,purple,19,mortality_percent,time_h,1,Annual sowthistle
+42,25.86912065,1552.147239,37.93103448,3,purple,19,mortality_percent,time_h,1,Annual sowthistle
+42,31.94274029,1916.564417,40.43887147,3,purple,19,mortality_percent,time_h,1,Annual sowthistle
+42,31.94274029,1916.564417,46.0815047,3,purple,19,mortality_percent,time_h,1,Annual sowthistle
+42,29.01840491,1741.104295,44.51410658,3,purple,19,mortality_percent,time_h,1,Annual sowthistle
+42,25.86912065,1552.147239,44.51410658,3,purple,19,mortality_percent,time_h,1,Annual sowthistle
+42,22.94478528,1376.687117,43.57366771,3,purple,19,mortality_percent,time_h,1,Annual sowthistle
+42,22.94478528,1376.687117,51.09717868,3,purple,19,mortality_percent,time_h,1,Annual sowthistle
+42,22.94478528,1376.687117,54.85893417,3,purple,19,mortality_percent,time_h,1,Annual sowthistle
+42,22.94478528,1376.687117,59.56112853,3,purple,19,mortality_percent,time_h,1,Annual sowthistle
+42,25.86912065,1552.147239,60.5015674,3,purple,19,mortality_percent,time_h,1,Annual sowthistle
+42,25.86912065,1552.147239,52.35109718,3,purple,19,mortality_percent,time_h,1,Annual sowthistle
+42,28.79345603,1727.607362,48.90282132,3,purple,19,mortality_percent,time_h,1,Annual sowthistle
+42,29.01840491,1741.104295,52.6645768,3,purple,19,mortality_percent,time_h,1,Annual sowthistle
+42,31.94274029,1916.564417,52.03761755,3,purple,19,mortality_percent,time_h,1,Annual sowthistle
+42,31.94274029,1916.564417,54.23197492,3,purple,19,mortality_percent,time_h,1,Annual sowthistle
+42,28.79345603,1727.607362,56.42633229,3,purple,19,mortality_percent,time_h,1,Annual sowthistle
+42,28.79345603,1727.607362,60.18808777,3,purple,19,mortality_percent,time_h,1,Annual sowthistle
+42,29.01840491,1741.104295,62.69592476,3,purple,19,mortality_percent,time_h,1,Annual sowthistle
+42,31.94274029,1916.564417,60.18808777,3,purple,19,mortality_percent,time_h,1,Annual sowthistle
+42,28.79345603,1727.607362,68.02507837,3,purple,19,mortality_percent,time_h,1,Annual sowthistle
+42,31.94274029,1916.564417,69.27899687,3,purple,19,mortality_percent,time_h,1,Annual sowthistle
+42,26.09406953,1565.644172,73.35423197,3,purple,19,mortality_percent,time_h,1,Annual sowthistle
+42,23.16973415,1390.184049,82.44514107,3,purple,19,mortality_percent,time_h,1,Annual sowthistle
+42,25.64417178,1538.650307,82.75862069,3,purple,19,mortality_percent,time_h,1,Annual sowthistle
+42,29.01840491,1741.104295,82.44514107,3,purple,19,mortality_percent,time_h,1,Annual sowthistle
+42,29.01840491,1741.104295,81.19122257,3,purple,19,mortality_percent,time_h,1,Annual sowthistle
+42,29.01840491,1741.104295,76.17554859,3,purple,19,mortality_percent,time_h,1,Annual sowthistle
+42,32.16768916,1930.06135,77.11598746,3,purple,19,mortality_percent,time_h,1,Annual sowthistle
+42,31.94274029,1916.564417,89.34169279,3,purple,19,mortality_percent,time_h,1,Annual sowthistle
+42,47.2392638,2834.355828,83.69905956,3,purple,19,mortality_percent,time_h,1,Annual sowthistle
+42,47.2392638,2834.355828,92.1630094,3,purple,19,mortality_percent,time_h,1,Annual sowthistle
+42,47.01431493,2820.858896,93.10344828,3,purple,19,mortality_percent,time_h,1,Annual sowthistle
+42,47.2392638,2834.355828,100,3,purple,19,mortality_percent,time_h,1,Annual sowthistle
+42,95.60327198,5736.196319,100,3,purple,19,mortality_percent,time_h,1,Annual sowthistle
+42,24,1440,0.00E+00,3,purple,19,mortality_percent,time_h,3,London rocket
+42,24,1440,3.703703704,3,purple,19,mortality_percent,time_h,3,London rocket
+42,24,1440,12.96296296,3,purple,19,mortality_percent,time_h,3,London rocket
+42,23.74468085,1424.680851,20.0617284,3,purple,19,mortality_percent,time_h,3,London rocket
+42,24,1440,23.14814815,3,purple,19,mortality_percent,time_h,3,London rocket
+42,24,1440,32.09876543,3,purple,19,mortality_percent,time_h,3,London rocket
+42,23.74468085,1424.680851,36.11111111,3,purple,19,mortality_percent,time_h,3,London rocket
+42,24.25531915,1455.319149,41.97530864,3,purple,19,mortality_percent,time_h,3,London rocket
+42,24,1440,57.40740741,3,purple,19,mortality_percent,time_h,3,London rocket
+42,40.08510638,2405.106383,0.00E+00,3,purple,19,mortality_percent,time_h,3,London rocket
+42,40.08510638,2405.106383,3.703703704,3,purple,19,mortality_percent,time_h,3,London rocket
+42,39.82978723,2389.787234,12.65432099,3,purple,19,mortality_percent,time_h,3,London rocket
+42,39.82978723,2389.787234,13.58024691,3,purple,19,mortality_percent,time_h,3,London rocket
+42,39.82978723,2389.787234,24.07407407,3,purple,19,mortality_percent,time_h,3,London rocket
+42,39.82978723,2389.787234,25,3,purple,19,mortality_percent,time_h,3,London rocket
+42,39.82978723,2389.787234,29.01234568,3,purple,19,mortality_percent,time_h,3,London rocket
+42,39.82978723,2389.787234,34.56790123,3,purple,19,mortality_percent,time_h,3,London rocket
+42,43.91489362,2634.893617,0,3,purple,19,mortality_percent,time_h,3,London rocket
+42,43.91489362,2634.893617,6.172839506,3,purple,19,mortality_percent,time_h,3,London rocket
+42,43.65957447,2619.574468,15.74074074,3,purple,19,mortality_percent,time_h,3,London rocket
+42,44.17021277,2650.212766,30.55555556,3,purple,19,mortality_percent,time_h,3,London rocket
+42,43.65957447,2619.574468,37.34567901,3,purple,19,mortality_percent,time_h,3,London rocket
+42,43.91489362,2634.893617,40.12345679,3,purple,19,mortality_percent,time_h,3,London rocket
+42,39.82978723,2389.787234,46.91358025,3,purple,19,mortality_percent,time_h,3,London rocket
+42,43.91489362,2634.893617,47.83950617,3,purple,19,mortality_percent,time_h,3,London rocket
+42,47.4893617,2849.361702,46.91358025,3,purple,19,mortality_percent,time_h,3,London rocket
+42,48,2880,34.87654321,3,purple,19,mortality_percent,time_h,3,London rocket
+42,48,2880,30.86419753,3,purple,19,mortality_percent,time_h,3,London rocket
+42,64.08510638,3845.106383,23.7654321,3,purple,19,mortality_percent,time_h,3,London rocket
+42,64.08510638,3845.106383,42.28395062,3,purple,19,mortality_percent,time_h,3,London rocket
+42,64.08510638,3845.106383,54.01234568,3,purple,19,mortality_percent,time_h,3,London rocket
+42,47.74468085,2864.680851,67.59259259,3,purple,19,mortality_percent,time_h,3,London rocket
+42,43.91489362,2634.893617,70.37037037,3,purple,19,mortality_percent,time_h,3,London rocket
+42,43.65957447,2619.574468,75.92592593,3,purple,19,mortality_percent,time_h,3,London rocket
+42,48,2880,78.39506173,3,purple,19,mortality_percent,time_h,3,London rocket
+42,43.91489362,2634.893617,88.27160494,3,purple,19,mortality_percent,time_h,3,London rocket
+42,63.82978723,3829.787234,65.74074074,3,purple,19,mortality_percent,time_h,3,London rocket
+42,71.74468085,4304.680851,53.7037037,3,purple,19,mortality_percent,time_h,3,London rocket
+42,64.08510638,3845.106383,71.91358025,3,purple,19,mortality_percent,time_h,3,London rocket
+42,64.08510638,3845.106383,76.85185185,3,purple,19,mortality_percent,time_h,3,London rocket
+42,63.82978723,3829.787234,88.27160494,3,purple,19,mortality_percent,time_h,3,London rocket
+42,63.82978723,3829.787234,100,3,purple,19,mortality_percent,time_h,3,London rocket
+42,71.74468085,4304.680851,100,3,purple,19,mortality_percent,time_h,3,London rocket
+42,71.74468085,4304.680851,88.58024691,3,purple,19,mortality_percent,time_h,3,London rocket
+42,71.74468085,4304.680851,87.03703704,3,purple,19,mortality_percent,time_h,3,London rocket
+42,71.74468085,4304.680851,86.11111111,3,purple,19,mortality_percent,time_h,3,London rocket
+42,72,4320,77.16049383,3,purple,19,mortality_percent,time_h,3,London rocket
+42,95.74468085,5744.680851,86.41975309,3,purple,19,mortality_percent,time_h,3,London rocket
+42,96,5760,87.65432099,3,purple,19,mortality_percent,time_h,3,London rocket
+42,96,5760,99.69135802,3,purple,19,mortality_percent,time_h,3,London rocket
+42,240.9502262,14457.01357,0,4,red,17,mortality_percent,time_h,5,Black nightshade
+42,238.6877828,14321.26697,6.853582555,4,red,17,mortality_percent,time_h,5,Black nightshade
+42,239.8190045,14389.14027,17.44548287,4,red,17,mortality_percent,time_h,5,Black nightshade
+42,288.4615385,17307.69231,6.853582555,4,red,17,mortality_percent,time_h,5,Black nightshade
+42,288.4615385,17307.69231,22.74143302,4,red,17,mortality_percent,time_h,5,Black nightshade
+42,312.2171946,18733.03168,46.72897196,4,red,17,mortality_percent,time_h,5,Black nightshade
+42,312.2171946,18733.03168,57.63239875,4,red,17,mortality_percent,time_h,5,Black nightshade
+42,289.5927602,17375.56561,58.56697819,4,red,17,mortality_percent,time_h,5,Black nightshade
+42,311.0859729,18665.15837,61.68224299,4,red,17,mortality_percent,time_h,5,Black nightshade
+42,334.841629,20090.49774,59.81308411,4,red,17,mortality_percent,time_h,5,Black nightshade
+42,287.3303167,17239.819,79.43925234,4,red,17,mortality_percent,time_h,5,Black nightshade
+42,309.9547511,18597.28507,80.68535826,4,red,17,mortality_percent,time_h,5,Black nightshade
+42,313.3484163,18800.90498,88.78504673,4,red,17,mortality_percent,time_h,5,Black nightshade
+42,337.1040724,20226.24434,87.22741433,4,red,17,mortality_percent,time_h,5,Black nightshade
+42,335.9728507,20158.37104,88.78504673,4,red,17,mortality_percent,time_h,5,Black nightshade
+42,335.9728507,20158.37104,90.34267913,4,red,17,mortality_percent,time_h,5,Black nightshade
+42,335.9728507,20158.37104,100,4,red,17,mortality_percent,time_h,5,Black nightshade
+42,384.6153846,23076.92308,100,4,red,17,mortality_percent,time_h,5,Black nightshade
+42,408.3710407,24502.26244,99.68847352,4,red,17,mortality_percent,time_h,5,Black nightshade
+42,505.6561086,30339.36652,100,4,red,17,mortality_percent,time_h,5,Black nightshade
+46,8.99795501,539.8773006,25.07836991,2,green,19,mortality_percent,time_h,1,Annual sowthistle
+46,8.99795501,539.8773006,33.54231975,2,green,19,mortality_percent,time_h,1,Annual sowthistle
+46,10.12269939,607.3619634,38.55799373,2,green,19,mortality_percent,time_h,1,Annual sowthistle
+46,8.54805726,512.8834356,40.43887147,2,green,19,mortality_percent,time_h,1,Annual sowthistle
+46,9.897750511,593.8650307,46.39498433,2,green,19,mortality_percent,time_h,1,Annual sowthistle
+46,11.02249489,661.3496934,51.72413793,2,green,19,mortality_percent,time_h,1,Annual sowthistle
+46,8.99795501,539.8773006,55.17241379,2,green,19,mortality_percent,time_h,1,Annual sowthistle
+46,10.12269939,607.3619634,57.68025078,2,green,19,mortality_percent,time_h,1,Annual sowthistle
+46,11.02249489,661.3496934,59.56112853,2,green,19,mortality_percent,time_h,1,Annual sowthistle
+46,8.99795501,539.8773006,59.87460815,2,green,19,mortality_percent,time_h,1,Annual sowthistle
+46,8.773006135,526.3803681,61.75548589,2,green,19,mortality_percent,time_h,1,Annual sowthistle
+46,9.672801636,580.3680982,66.77115987,2,green,19,mortality_percent,time_h,1,Annual sowthistle
+46,10.79754601,647.8527606,68.02507837,2,green,19,mortality_percent,time_h,1,Annual sowthistle
+46,11.24744376,674.8466256,68.96551724,2,green,19,mortality_percent,time_h,1,Annual sowthistle
+46,12.82208589,769.3251534,67.39811912,2,green,19,mortality_percent,time_h,1,Annual sowthistle
+46,8.99795501,539.8773006,69.90595611,2,green,19,mortality_percent,time_h,1,Annual sowthistle
+46,8.773006135,526.3803681,72.10031348,2,green,19,mortality_percent,time_h,1,Annual sowthistle
+46,11.02249489,661.3496934,70.84639498,2,green,19,mortality_percent,time_h,1,Annual sowthistle
+46,11.02249489,661.3496934,71.78683386,2,green,19,mortality_percent,time_h,1,Annual sowthistle
+46,11.02249489,661.3496934,73.04075235,2,green,19,mortality_percent,time_h,1,Annual sowthistle
+46,9.897750511,593.8650307,74.60815047,2,green,19,mortality_percent,time_h,1,Annual sowthistle
+46,9.672801636,580.3680982,77.42946708,2,green,19,mortality_percent,time_h,1,Annual sowthistle
+46,9.897750511,593.8650307,81.81818182,2,green,19,mortality_percent,time_h,1,Annual sowthistle
+46,11.24744376,674.8466256,84.01253918,2,green,19,mortality_percent,time_h,1,Annual sowthistle
+46,14.84662577,890.7975462,82.44514107,2,green,19,mortality_percent,time_h,1,Annual sowthistle
+46,12.82208589,769.3251534,86.52037618,2,green,19,mortality_percent,time_h,1,Annual sowthistle
+46,11.02249489,661.3496934,90.28213166,2,green,19,mortality_percent,time_h,1,Annual sowthistle
+46,10.79754601,647.8527606,92.1630094,2,green,19,mortality_percent,time_h,1,Annual sowthistle
+46,9.897750511,593.8650307,93.10344828,2,green,19,mortality_percent,time_h,1,Annual sowthistle
+46,9.897750511,593.8650307,100,2,green,19,mortality_percent,time_h,1,Annual sowthistle
+46,13.04703476,782.8220856,100,2,green,19,mortality_percent,time_h,1,Annual sowthistle
+46,14.84662577,890.7975462,100,2,green,19,mortality_percent,time_h,1,Annual sowthistle
+46,12.82208589,769.3251534,93.73040752,2,green,19,mortality_percent,time_h,1,Annual sowthistle
+46,12.59713701,755.8282206,92.47648903,2,green,19,mortality_percent,time_h,1,Annual sowthistle
+46,14.84662577,890.7975462,92.47648903,2,green,19,mortality_percent,time_h,1,Annual sowthistle
+46,14.84662577,890.7975462,91.53605016,2,green,19,mortality_percent,time_h,1,Annual sowthistle
+46,4.988913525,299.3348115,0.00E+00,2,green,19,mortality_percent,time_h,2,Barnyardgrass
+46,4.988913525,299.3348115,9.567901235,2,green,19,mortality_percent,time_h,2,Barnyardgrass
+46,4.988913525,299.3348115,11.11111111,2,green,19,mortality_percent,time_h,2,Barnyardgrass
+46,5.044345898,302.6607539,30.24691358,2,green,19,mortality_percent,time_h,2,Barnyardgrass
+46,6.984478936,419.0687362,17.28395062,2,green,19,mortality_percent,time_h,2,Barnyardgrass
+46,6.984478936,419.0687362,7.098765432,2,green,19,mortality_percent,time_h,2,Barnyardgrass
+46,6.984478936,419.0687362,0,2,green,19,mortality_percent,time_h,2,Barnyardgrass
+46,9.090909091,545.4545455,0,2,green,19,mortality_percent,time_h,2,Barnyardgrass
+46,10.97560976,658.5365856,0.00E+00,2,green,19,mortality_percent,time_h,2,Barnyardgrass
+46,11.03104213,661.8625278,12.65432099,2,green,19,mortality_percent,time_h,2,Barnyardgrass
+46,8.980044346,538.8026608,22.5308642,2,green,19,mortality_percent,time_h,2,Barnyardgrass
+46,9.035476718,542.1286031,44.75308642,2,green,19,mortality_percent,time_h,2,Barnyardgrass
+46,11.0864745,665.18847,37.34567901,2,green,19,mortality_percent,time_h,2,Barnyardgrass
+46,11.03104213,661.8625278,49.69135802,2,green,19,mortality_percent,time_h,2,Barnyardgrass
+46,11.03104213,661.8625278,55.55555556,2,green,19,mortality_percent,time_h,2,Barnyardgrass
+46,13.02660754,781.5964524,64.19753086,2,green,19,mortality_percent,time_h,2,Barnyardgrass
+46,11.03104213,661.8625278,77.77777778,2,green,19,mortality_percent,time_h,2,Barnyardgrass
+46,11.03104213,661.8625278,87.03703704,2,green,19,mortality_percent,time_h,2,Barnyardgrass
+46,10.97560976,658.5365856,89.19753086,2,green,19,mortality_percent,time_h,2,Barnyardgrass
+46,12.97117517,778.2705102,99.69135802,2,green,19,mortality_percent,time_h,2,Barnyardgrass
+46,10.97560976,658.5365856,100,2,green,19,mortality_percent,time_h,2,Barnyardgrass
+46,14.02439024,841.4634144,100,2,green,19,mortality_percent,time_h,2,Barnyardgrass
+46,15.96452328,957.8713968,100,2,green,19,mortality_percent,time_h,2,Barnyardgrass
+46,14.02439024,841.4634144,89.50617284,2,green,19,mortality_percent,time_h,2,Barnyardgrass
+46,12.97117517,778.2705102,87.65432099,2,green,19,mortality_percent,time_h,2,Barnyardgrass
+46,24.05764967,1443.45898,99.69135802,2,green,19,mortality_percent,time_h,2,Barnyardgrass
+46,13.0212766,781.276596,6.481481481,2,green,19,mortality_percent,time_h,3,London rocket
+46,11.23404255,674.042553,10.18518519,2,green,19,mortality_percent,time_h,3,London rocket
+46,14.29787234,857.8723404,9.259259259,2,green,19,mortality_percent,time_h,3,London rocket
+46,11.23404255,674.042553,14.81481481,2,green,19,mortality_percent,time_h,3,London rocket
+46,10.72340426,643.4042556,18.20987654,2,green,19,mortality_percent,time_h,3,London rocket
+46,13.0212766,781.276596,18.20987654,2,green,19,mortality_percent,time_h,3,London rocket
+46,14.04255319,842.5531914,17.28395062,2,green,19,mortality_percent,time_h,3,London rocket
+46,10.9787234,658.723404,22.5308642,2,green,19,mortality_percent,time_h,3,London rocket
+46,14.04255319,842.5531914,25.30864198,2,green,19,mortality_percent,time_h,3,London rocket
+46,13.27659574,796.5957444,27.4691358,2,green,19,mortality_percent,time_h,3,London rocket
+46,10.9787234,658.723404,27.77777778,2,green,19,mortality_percent,time_h,3,London rocket
+46,17.36170213,1041.702128,29.9382716,2,green,19,mortality_percent,time_h,3,London rocket
+46,10.9787234,658.723404,36.72839506,2,green,19,mortality_percent,time_h,3,London rocket
+46,13.0212766,781.276596,34.25925926,2,green,19,mortality_percent,time_h,3,London rocket
+46,13.0212766,781.276596,36.72839506,2,green,19,mortality_percent,time_h,3,London rocket
+46,14.04255319,842.5531914,36.11111111,2,green,19,mortality_percent,time_h,3,London rocket
+46,13.0212766,781.276596,39.81481481,2,green,19,mortality_percent,time_h,3,London rocket
+46,14.04255319,842.5531914,40.74074074,2,green,19,mortality_percent,time_h,3,London rocket
+46,13.0212766,781.276596,43.82716049,2,green,19,mortality_percent,time_h,3,London rocket
+46,10.9787234,658.723404,46.60493827,2,green,19,mortality_percent,time_h,3,London rocket
+46,16.85106383,1011.06383,50.30864198,2,green,19,mortality_percent,time_h,3,London rocket
+46,12.76595745,765.957447,52.77777778,2,green,19,mortality_percent,time_h,3,London rocket
+46,14.04255319,842.5531914,54.32098765,2,green,19,mortality_percent,time_h,3,London rocket
+46,14.04255319,842.5531914,57.09876543,2,green,19,mortality_percent,time_h,3,London rocket
+46,10.72340426,643.4042556,61.41975309,2,green,19,mortality_percent,time_h,3,London rocket
+46,13.27659574,796.5957444,62.34567901,2,green,19,mortality_percent,time_h,3,London rocket
+46,12.76595745,765.957447,63.58024691,2,green,19,mortality_percent,time_h,3,London rocket
+46,17.36170213,1041.702128,63.58024691,2,green,19,mortality_percent,time_h,3,London rocket
+46,17.10638298,1026.382979,60.18518519,2,green,19,mortality_percent,time_h,3,London rocket
+46,16.85106383,1011.06383,72.22222222,2,green,19,mortality_percent,time_h,3,London rocket
+46,14.04255319,842.5531914,72.5308642,2,green,19,mortality_percent,time_h,3,London rocket
+46,14.04255319,842.5531914,78.39506173,2,green,19,mortality_percent,time_h,3,London rocket
+46,16.85106383,1011.06383,79.9382716,2,green,19,mortality_percent,time_h,3,London rocket
+46,13.78723404,827.2340424,82.09876543,2,green,19,mortality_percent,time_h,3,London rocket
+46,13.78723404,827.2340424,89.81481481,2,green,19,mortality_percent,time_h,3,London rocket
+46,16.59574468,995.7446808,89.81481481,2,green,19,mortality_percent,time_h,3,London rocket
+46,17.10638298,1026.382979,91.66666667,2,green,19,mortality_percent,time_h,3,London rocket
+46,24,1440,87.03703704,2,green,19,mortality_percent,time_h,3,London rocket
+46,23.74468085,1424.680851,90.12345679,2,green,19,mortality_percent,time_h,3,London rocket
+46,23.74468085,1424.680851,100,2,green,19,mortality_percent,time_h,3,London rocket
+46,173.0769231,10384.61539,24.92211838,3,purple,19,mortality_percent,time_h,5,Black nightshade
+46,171.9457014,10316.74208,28.97196262,3,purple,19,mortality_percent,time_h,5,Black nightshade
+46,171.9457014,10316.74208,35.51401869,3,purple,19,mortality_percent,time_h,5,Black nightshade
+46,173.0769231,10384.61539,46.41744548,3,purple,19,mortality_percent,time_h,5,Black nightshade
+46,193.438914,11606.33484,54.20560748,3,purple,19,mortality_percent,time_h,5,Black nightshade
+46,186.6515837,11199.09502,55.76323988,3,purple,19,mortality_percent,time_h,5,Black nightshade
+46,186.6515837,11199.09502,57.32087227,3,purple,19,mortality_percent,time_h,5,Black nightshade
+46,192.3076923,11538.46154,58.56697819,3,purple,19,mortality_percent,time_h,5,Black nightshade
+46,171.9457014,10316.74208,67.60124611,3,purple,19,mortality_percent,time_h,5,Black nightshade
+46,187.7828054,11266.96832,67.60124611,3,purple,19,mortality_percent,time_h,5,Black nightshade
+46,194.5701357,11674.20814,68.22429907,3,purple,19,mortality_percent,time_h,5,Black nightshade
+46,188.9140271,11334.84163,69.1588785,3,purple,19,mortality_percent,time_h,5,Black nightshade
+46,173.0769231,10384.61539,79.12772586,3,purple,19,mortality_percent,time_h,5,Black nightshade
+46,185.520362,11131.22172,79.12772586,3,purple,19,mortality_percent,time_h,5,Black nightshade
+46,193.438914,11606.33484,78.5046729,3,purple,19,mortality_percent,time_h,5,Black nightshade
+46,193.438914,11606.33484,79.43925234,3,purple,19,mortality_percent,time_h,5,Black nightshade
+46,190.0452489,11402.71493,80.68535826,3,purple,19,mortality_percent,time_h,5,Black nightshade
+46,186.6515837,11199.09502,81.30841121,3,purple,19,mortality_percent,time_h,5,Black nightshade
+46,185.520362,11131.22172,82.86604361,3,purple,19,mortality_percent,time_h,5,Black nightshade
+46,171.9457014,10316.74208,89.71962617,3,purple,19,mortality_percent,time_h,5,Black nightshade
+46,196.8325792,11809.95475,85.98130841,3,purple,19,mortality_percent,time_h,5,Black nightshade
+46,188.9140271,11334.84163,87.85046729,3,purple,19,mortality_percent,time_h,5,Black nightshade
+46,192.3076923,11538.46154,89.09657321,3,purple,19,mortality_percent,time_h,5,Black nightshade
+46,192.3076923,11538.46154,90.34267913,3,purple,19,mortality_percent,time_h,5,Black nightshade
+46,195.7013575,11742.08145,90.03115265,3,purple,19,mortality_percent,time_h,5,Black nightshade
+46,197.9638009,11877.82805,88.78504673,3,purple,19,mortality_percent,time_h,5,Black nightshade
+46,185.520362,11131.22172,100,3,purple,19,mortality_percent,time_h,5,Black nightshade
+46,188.9140271,11334.84163,100,3,purple,19,mortality_percent,time_h,5,Black nightshade
+46,193.438914,11606.33484,100,3,purple,19,mortality_percent,time_h,5,Black nightshade
+46,197.9638009,11877.82805,100,3,purple,19,mortality_percent,time_h,5,Black nightshade
+46,212.6696833,12760.181,100,3,purple,19,mortality_percent,time_h,5,Black nightshade
+46,237.5565611,14253.39367,100,3,purple,19,mortality_percent,time_h,5,Black nightshade
+46,116.2162162,6972.972972,4.615384615,3,purple,19,mortality_percent,time_h,6,Tumble pigweed
+46,123.4234234,7405.405404,0.307692308,3,purple,19,mortality_percent,time_h,6,Tumble pigweed
+46,141.4414414,8486.486484,2.769230769,3,purple,19,mortality_percent,time_h,6,Tumble pigweed
+46,147.7477477,8864.864862,2.461538462,3,purple,19,mortality_percent,time_h,6,Tumble pigweed
+46,145.045045,8702.7027,0.00E+00,3,purple,19,mortality_percent,time_h,6,Tumble pigweed
+46,189.1891892,11351.35135,0.00E+00,3,purple,19,mortality_percent,time_h,6,Tumble pigweed
+46,164.8648649,9891.891894,8,3,purple,19,mortality_percent,time_h,6,Tumble pigweed
+46,200,12000,13.23076923,3,purple,19,mortality_percent,time_h,6,Tumble pigweed
+46,238.7387387,14324.32432,13.23076923,3,purple,19,mortality_percent,time_h,6,Tumble pigweed
+46,240.5405405,14432.43243,0.00E+00,3,purple,19,mortality_percent,time_h,6,Tumble pigweed
+46,238.7387387,14324.32432,34.46153846,3,purple,19,mortality_percent,time_h,6,Tumble pigweed
+46,238.7387387,14324.32432,45.53846154,3,purple,19,mortality_percent,time_h,6,Tumble pigweed
+46,248.6486486,14918.91892,45.84615385,3,purple,19,mortality_percent,time_h,6,Tumble pigweed
+46,240.5405405,14432.43243,52.30769231,3,purple,19,mortality_percent,time_h,6,Tumble pigweed
+46,221.6216216,13297.2973,52.30769231,3,purple,19,mortality_percent,time_h,6,Tumble pigweed
+46,238.7387387,14324.32432,67.38461538,3,purple,19,mortality_percent,time_h,6,Tumble pigweed
+46,238.7387387,14324.32432,68.92307692,3,purple,19,mortality_percent,time_h,6,Tumble pigweed
+46,262.1621622,15729.72973,68,3,purple,19,mortality_percent,time_h,6,Tumble pigweed
+46,263.963964,15837.83784,75.69230769,3,purple,19,mortality_percent,time_h,6,Tumble pigweed
+46,239.6396396,14378.37838,79.07692308,3,purple,19,mortality_percent,time_h,6,Tumble pigweed
+46,240.5405405,14432.43243,88.92307692,3,purple,19,mortality_percent,time_h,6,Tumble pigweed
+46,263.0630631,15783.78379,88,3,purple,19,mortality_percent,time_h,6,Tumble pigweed
+46,263.963964,15837.83784,89.23076923,3,purple,19,mortality_percent,time_h,6,Tumble pigweed
+46,263.963964,15837.83784,99.69230769,3,purple,19,mortality_percent,time_h,6,Tumble pigweed
+46,311.7117117,18702.7027,100,3,purple,19,mortality_percent,time_h,6,Tumble pigweed
+46,333.3333333,20000,99.69230769,3,purple,19,mortality_percent,time_h,6,Tumble pigweed
+46,357.6576577,21459.45946,100,3,purple,19,mortality_percent,time_h,6,Tumble pigweed
+46,381.981982,22918.91892,100,3,purple,19,mortality_percent,time_h,6,Tumble pigweed
+46,407.2072072,24432.43243,100,3,purple,19,mortality_percent,time_h,6,Tumble pigweed
+50,0.224948875,13.4969325,0,1,red,19,mortality_percent,time_h,1,Annual sowthistle
+50,1.124744376,67.48466256,6.5830721,1,red,19,mortality_percent,time_h,1,Annual sowthistle
+50,0.224948875,13.4969325,8.150470219,1,red,19,mortality_percent,time_h,1,Annual sowthistle
+50,0.899795501,53.98773006,11.28526646,1,red,19,mortality_percent,time_h,1,Annual sowthistle
+50,0.224948875,13.4969325,15.36050157,1,red,19,mortality_percent,time_h,1,Annual sowthistle
+50,1.124744376,67.48466256,17.24137931,1,red,19,mortality_percent,time_h,1,Annual sowthistle
+50,1.124744376,67.48466256,20.06269592,1,red,19,mortality_percent,time_h,1,Annual sowthistle
+50,0.449897751,26.99386506,21.0031348,1,red,19,mortality_percent,time_h,1,Annual sowthistle
+50,0.674846626,40.49079756,25.07836991,1,red,19,mortality_percent,time_h,1,Annual sowthistle
+50,0.224948875,13.4969325,29.78056426,1,red,19,mortality_percent,time_h,1,Annual sowthistle
+50,1.124744376,67.48466256,32.60188088,1,red,19,mortality_percent,time_h,1,Annual sowthistle
+50,1.124744376,67.48466256,36.05015674,1,red,19,mortality_percent,time_h,1,Annual sowthistle
+50,0.899795501,53.98773006,45.45454545,1,red,19,mortality_percent,time_h,1,Annual sowthistle
+50,0.224948875,13.4969325,47.64890282,1,red,19,mortality_percent,time_h,1,Annual sowthistle
+50,0.674846626,40.49079756,52.03761755,1,red,19,mortality_percent,time_h,1,Annual sowthistle
+50,0.899795501,53.98773006,59.2476489,1,red,19,mortality_percent,time_h,1,Annual sowthistle
+50,0.899795501,53.98773006,62.69592476,1,red,19,mortality_percent,time_h,1,Annual sowthistle
+50,2.249488753,134.9693252,63.63636364,1,red,19,mortality_percent,time_h,1,Annual sowthistle
+50,0.224948875,13.4969325,64.89028213,1,red,19,mortality_percent,time_h,1,Annual sowthistle
+50,2.249488753,134.9693252,69.27899687,1,red,19,mortality_percent,time_h,1,Annual sowthistle
+50,2.024539877,121.4723926,75.86206897,1,red,19,mortality_percent,time_h,1,Annual sowthistle
+50,0.899795501,53.98773006,76.48902821,1,red,19,mortality_percent,time_h,1,Annual sowthistle
+50,1.799591002,107.9754601,79.62382445,1,red,19,mortality_percent,time_h,1,Annual sowthistle
+50,2.024539877,121.4723926,83.69905956,1,red,19,mortality_percent,time_h,1,Annual sowthistle
+50,0.899795501,53.98773006,83.38557994,1,red,19,mortality_percent,time_h,1,Annual sowthistle
+50,1.799591002,107.9754601,89.65517241,1,red,19,mortality_percent,time_h,1,Annual sowthistle
+50,1.799591002,107.9754601,92.1630094,1,red,19,mortality_percent,time_h,1,Annual sowthistle
+50,2.699386503,161.9631902,93.10344828,1,red,19,mortality_percent,time_h,1,Annual sowthistle
+50,2.024539877,121.4723926,94.98432602,1,red,19,mortality_percent,time_h,1,Annual sowthistle
+50,2.024539877,121.4723926,100,1,red,19,mortality_percent,time_h,1,Annual sowthistle
+50,2.699386503,161.9631902,100,1,red,19,mortality_percent,time_h,1,Annual sowthistle
+50,3.824130879,229.4478527,100,1,red,19,mortality_percent,time_h,1,Annual sowthistle
+50,3.048780488,182.9268293,3.703703704,1,red,19,mortality_percent,time_h,2,Barnyardgrass
+50,3.048780488,182.9268293,10.80246914,1,red,19,mortality_percent,time_h,2,Barnyardgrass
+50,2.993348115,179.6008869,17.28395062,1,red,19,mortality_percent,time_h,2,Barnyardgrass
+50,3.048780488,182.9268293,27.16049383,1,red,19,mortality_percent,time_h,2,Barnyardgrass
+50,3.048780488,182.9268293,29.01234568,1,red,19,mortality_percent,time_h,2,Barnyardgrass
+50,4.046563193,242.7937916,33.02469136,1,red,19,mortality_percent,time_h,2,Barnyardgrass
+50,4.046563193,242.7937916,35.80246914,1,red,19,mortality_percent,time_h,2,Barnyardgrass
+50,3.048780488,182.9268293,37.65432099,1,red,19,mortality_percent,time_h,2,Barnyardgrass
+50,2.993348115,179.6008869,39.50617284,1,red,19,mortality_percent,time_h,2,Barnyardgrass
+50,3.99113082,239.4678492,41.04938272,1,red,19,mortality_percent,time_h,2,Barnyardgrass
+50,3.99113082,239.4678492,44.75308642,1,red,19,mortality_percent,time_h,2,Barnyardgrass
+50,3.048780488,182.9268293,44.44444444,1,red,19,mortality_percent,time_h,2,Barnyardgrass
+50,3.048780488,182.9268293,58.95061728,1,red,19,mortality_percent,time_h,2,Barnyardgrass
+50,3.048780488,182.9268293,63.88888889,1,red,19,mortality_percent,time_h,2,Barnyardgrass
+50,3.048780488,182.9268293,66.35802469,1,red,19,mortality_percent,time_h,2,Barnyardgrass
+50,3.99113082,239.4678492,57.09876543,1,red,19,mortality_percent,time_h,2,Barnyardgrass
+50,4.101995565,246.1197339,55.86419753,1,red,19,mortality_percent,time_h,2,Barnyardgrass
+50,4.988913525,299.3348115,54.01234568,1,red,19,mortality_percent,time_h,2,Barnyardgrass
+50,5.044345898,302.6607539,65.12345679,1,red,19,mortality_percent,time_h,2,Barnyardgrass
+50,4.988913525,299.3348115,66.66666667,1,red,19,mortality_percent,time_h,2,Barnyardgrass
+50,3.99113082,239.4678492,67.90123457,1,red,19,mortality_percent,time_h,2,Barnyardgrass
+50,2.993348115,179.6008869,75.92592593,1,red,19,mortality_percent,time_h,2,Barnyardgrass
+50,3.99113082,239.4678492,77.77777778,1,red,19,mortality_percent,time_h,2,Barnyardgrass
+50,3.99113082,239.4678492,79.01234568,1,red,19,mortality_percent,time_h,2,Barnyardgrass
+50,4.988913525,299.3348115,78.39506173,1,red,19,mortality_percent,time_h,2,Barnyardgrass
+50,4.988913525,299.3348115,77.16049383,1,red,19,mortality_percent,time_h,2,Barnyardgrass
+50,4.046563193,242.7937916,87.65432099,1,red,19,mortality_percent,time_h,2,Barnyardgrass
+50,4.046563193,242.7937916,89.50617284,1,red,19,mortality_percent,time_h,2,Barnyardgrass
+50,4.988913525,299.3348115,88.88888889,1,red,19,mortality_percent,time_h,2,Barnyardgrass
+50,6.042128603,362.5277162,87.96296296,1,red,19,mortality_percent,time_h,2,Barnyardgrass
+50,5.986696231,359.2017739,89.81481481,1,red,19,mortality_percent,time_h,2,Barnyardgrass
+50,7.095343681,425.7206209,89.19753086,1,red,19,mortality_percent,time_h,2,Barnyardgrass
+50,3.99113082,239.4678492,100,1,red,19,mortality_percent,time_h,2,Barnyardgrass
+50,5.044345898,302.6607539,100,1,red,19,mortality_percent,time_h,2,Barnyardgrass
+50,5.931263858,355.8758315,100,1,red,19,mortality_percent,time_h,2,Barnyardgrass
+50,6.984478936,419.0687362,100,1,red,19,mortality_percent,time_h,2,Barnyardgrass
+50,8.869179601,532.1507761,100,1,red,19,mortality_percent,time_h,2,Barnyardgrass
+50,12.08425721,725.0554326,100,1,red,19,mortality_percent,time_h,2,Barnyardgrass
+50,0.765957447,45.95744682,0,1,red,19,mortality_percent,time_h,3,London rocket
+50,2.042553191,122.5531915,0.00E+00,1,red,19,mortality_percent,time_h,3,London rocket
+50,1.531914894,91.91489364,0.925925926,1,red,19,mortality_percent,time_h,3,London rocket
+50,1.531914894,91.91489364,2.777777778,1,red,19,mortality_percent,time_h,3,London rocket
+50,1.021276596,61.27659576,3.086419753,1,red,19,mortality_percent,time_h,3,London rocket
+50,2.042553191,122.5531915,8.641975309,1,red,19,mortality_percent,time_h,3,London rocket
+50,2.042553191,122.5531915,10.18518519,1,red,19,mortality_percent,time_h,3,London rocket
+50,2.042553191,122.5531915,11.11111111,1,red,19,mortality_percent,time_h,3,London rocket
+50,0.765957447,45.95744682,13.58024691,1,red,19,mortality_percent,time_h,3,London rocket
+50,2.808510638,168.5106383,14.50617284,1,red,19,mortality_percent,time_h,3,London rocket
+50,1.021276596,61.27659576,22.83950617,1,red,19,mortality_percent,time_h,3,London rocket
+50,2.042553191,122.5531915,27.16049383,1,red,19,mortality_percent,time_h,3,London rocket
+50,1.787234043,107.2340426,29.9382716,1,red,19,mortality_percent,time_h,3,London rocket
+50,1.787234043,107.2340426,35.49382716,1,red,19,mortality_percent,time_h,3,London rocket
+50,3.319148936,199.1489362,36.11111111,1,red,19,mortality_percent,time_h,3,London rocket
+50,1.787234043,107.2340426,39.50617284,1,red,19,mortality_percent,time_h,3,London rocket
+50,3.319148936,199.1489362,42.28395062,1,red,19,mortality_percent,time_h,3,London rocket
+50,3.063829787,183.8297872,47.22222222,1,red,19,mortality_percent,time_h,3,London rocket
+50,3.063829787,183.8297872,51.54320988,1,red,19,mortality_percent,time_h,3,London rocket
+50,2.808510638,168.5106383,53.08641975,1,red,19,mortality_percent,time_h,3,London rocket
+50,4.085106383,245.106383,54.32098765,1,red,19,mortality_percent,time_h,3,London rocket
+50,2.042553191,122.5531915,55.86419753,1,red,19,mortality_percent,time_h,3,London rocket
+50,3.063829787,183.8297872,61.11111111,1,red,19,mortality_percent,time_h,3,London rocket
+50,3.063829787,183.8297872,64.19753086,1,red,19,mortality_percent,time_h,3,London rocket
+50,2.808510638,168.5106383,67.90123457,1,red,19,mortality_percent,time_h,3,London rocket
+50,2.808510638,168.5106383,71.2962963,1,red,19,mortality_percent,time_h,3,London rocket
+50,3.829787234,229.787234,72.83950617,1,red,19,mortality_percent,time_h,3,London rocket
+50,2.553191489,153.1914893,75.92592593,1,red,19,mortality_percent,time_h,3,London rocket
+50,4.85106383,291.0638298,77.4691358,1,red,19,mortality_percent,time_h,3,London rocket
+50,4.085106383,245.106383,81.79012346,1,red,19,mortality_percent,time_h,3,London rocket
+50,4.85106383,291.0638298,88.27160494,1,red,19,mortality_percent,time_h,3,London rocket
+50,4.85106383,291.0638298,89.19753086,1,red,19,mortality_percent,time_h,3,London rocket
+50,3.319148936,199.1489362,88.88888889,1,red,19,mortality_percent,time_h,3,London rocket
+50,2.553191489,153.1914893,89.81481481,1,red,19,mortality_percent,time_h,3,London rocket
+50,3.829787234,229.787234,91.04938272,1,red,19,mortality_percent,time_h,3,London rocket
+50,2.553191489,153.1914893,100,1,red,19,mortality_percent,time_h,3,London rocket
+50,3.574468085,214.4680851,100,1,red,19,mortality_percent,time_h,3,London rocket
+50,4.085106383,245.106383,100,1,red,19,mortality_percent,time_h,3,London rocket
+50,5.106382979,306.3829787,100,1,red,19,mortality_percent,time_h,3,London rocket
+50,5.617021277,337.0212766,99.69135802,1,red,19,mortality_percent,time_h,3,London rocket
+50,62.21719457,3733.031674,37.38317757,2,green,19,mortality_percent,time_h,5,Black nightshade
+50,56.56108597,3393.665158,39.87538941,2,green,19,mortality_percent,time_h,5,Black nightshade
+50,57.69230769,3461.538461,47.97507788,2,green,19,mortality_percent,time_h,5,Black nightshade
+50,58.82352941,3529.411765,48.28660436,2,green,19,mortality_percent,time_h,5,Black nightshade
+50,58.82352941,3529.411765,59.81308411,2,green,19,mortality_percent,time_h,5,Black nightshade
+50,58.82352941,3529.411765,68.84735202,2,green,19,mortality_percent,time_h,5,Black nightshade
+50,59.95475113,3597.285068,69.1588785,2,green,19,mortality_percent,time_h,5,Black nightshade
+50,58.82352941,3529.411765,79.43925234,2,green,19,mortality_percent,time_h,5,Black nightshade
+50,61.08597285,3665.158371,79.43925234,2,green,19,mortality_percent,time_h,5,Black nightshade
+50,63.34841629,3800.904977,80.0623053,2,green,19,mortality_percent,time_h,5,Black nightshade
+50,66.74208145,4004.524887,79.43925234,2,green,19,mortality_percent,time_h,5,Black nightshade
+50,62.21719457,3733.031674,90.03115265,2,green,19,mortality_percent,time_h,5,Black nightshade
+50,57.69230769,3461.538461,90.03115265,2,green,19,mortality_percent,time_h,5,Black nightshade
+50,57.69230769,3461.538461,100,2,green,19,mortality_percent,time_h,5,Black nightshade
+50,58.82352941,3529.411765,100,2,green,19,mortality_percent,time_h,5,Black nightshade
+50,61.08597285,3665.158371,100,2,green,19,mortality_percent,time_h,5,Black nightshade
+50,65.61085973,3936.651584,100,2,green,19,mortality_percent,time_h,5,Black nightshade
+50,67.87330317,4072.39819,100,2,green,19,mortality_percent,time_h,5,Black nightshade
+50,72.39819005,4343.891403,100,2,green,19,mortality_percent,time_h,5,Black nightshade
+50,0.135746606,8.14479636,4.615384615,2,green,19,mortality_percent,time_h,4,Common purslane
+50,8.823529412,529.4117647,0.307692308,2,green,19,mortality_percent,time_h,4,Common purslane
+50,8.823529412,529.4117647,21.84615385,2,green,19,mortality_percent,time_h,4,Common purslane
+50,8.959276018,537.5565611,30.76923077,2,green,19,mortality_percent,time_h,4,Common purslane
+50,10.99547511,659.7285066,29.53846154,2,green,19,mortality_percent,time_h,4,Common purslane
+50,8.823529412,529.4117647,36,2,green,19,mortality_percent,time_h,4,Common purslane
+50,10.99547511,659.7285066,39.38461538,2,green,19,mortality_percent,time_h,4,Common purslane
+50,10.99547511,659.7285066,41.53846154,2,green,19,mortality_percent,time_h,4,Common purslane
+50,8.959276018,537.5565611,46.76923077,2,green,19,mortality_percent,time_h,4,Common purslane
+50,8.959276018,537.5565611,52,2,green,19,mortality_percent,time_h,4,Common purslane
+50,8.959276018,537.5565611,57.23076923,2,green,19,mortality_percent,time_h,4,Common purslane
+50,8.959276018,537.5565611,60.30769231,2,green,19,mortality_percent,time_h,4,Common purslane
+50,10.85972851,651.5837106,53.53846154,2,green,19,mortality_percent,time_h,4,Common purslane
+50,13.98190045,838.914027,48.61538462,2,green,19,mortality_percent,time_h,4,Common purslane
+50,13.98190045,838.914027,50.46153846,2,green,19,mortality_percent,time_h,4,Common purslane
+50,13.98190045,838.914027,55.07692308,2,green,19,mortality_percent,time_h,4,Common purslane
+50,8.959276018,537.5565611,62.46153846,2,green,19,mortality_percent,time_h,4,Common purslane
+50,10.99547511,659.7285066,64.92307692,2,green,19,mortality_percent,time_h,4,Common purslane
+50,10.99547511,659.7285066,72,2,green,19,mortality_percent,time_h,4,Common purslane
+50,8.959276018,537.5565611,74.15384615,2,green,19,mortality_percent,time_h,4,Common purslane
+50,10.99547511,659.7285066,76.61538462,2,green,19,mortality_percent,time_h,4,Common purslane
+50,13.84615385,830.769231,69.84615385,2,green,19,mortality_percent,time_h,4,Common purslane
+50,14.11764706,847.0588236,74.76923077,2,green,19,mortality_percent,time_h,4,Common purslane
+50,16.96832579,1018.099547,74.76923077,2,green,19,mortality_percent,time_h,4,Common purslane
+50,13.98190045,838.914027,86.15384615,2,green,19,mortality_percent,time_h,4,Common purslane
+50,13.98190045,838.914027,87.38461538,2,green,19,mortality_percent,time_h,4,Common purslane
+50,13.98190045,838.914027,89.53846154,2,green,19,mortality_percent,time_h,4,Common purslane
+50,10.85972851,651.5837106,87.07692308,2,green,19,mortality_percent,time_h,4,Common purslane
+50,16.96832579,1018.099547,86.46153846,2,green,19,mortality_percent,time_h,4,Common purslane
+50,16.96832579,1018.099547,88.61538462,2,green,19,mortality_percent,time_h,4,Common purslane
+50,13.98190045,838.914027,100,2,green,19,mortality_percent,time_h,4,Common purslane
+50,16.83257919,1009.954751,100,2,green,19,mortality_percent,time_h,4,Common purslane
+50,19.81900452,1189.140271,99.69230769,2,green,19,mortality_percent,time_h,4,Common purslane
+50,23.21266968,1392.760181,99.69230769,2,green,19,mortality_percent,time_h,4,Common purslane
+50,26.19909502,1571.945701,99.69230769,2,green,19,mortality_percent,time_h,4,Common purslane
+50,26.06334842,1563.800905,89.84615385,2,green,19,mortality_percent,time_h,4,Common purslane
+50,26.06334842,1563.800905,88.30769231,2,green,19,mortality_percent,time_h,4,Common purslane
+50,19.95475113,1197.285068,89.23076923,2,green,19,mortality_percent,time_h,4,Common purslane
+50,20.09049774,1205.429864,88,2,green,19,mortality_percent,time_h,4,Common purslane
+50,19.95475113,1197.285068,85.84615385,2,green,19,mortality_percent,time_h,4,Common purslane
+50,23.07692308,1384.615385,86.76923077,2,green,19,mortality_percent,time_h,4,Common purslane
+50,23.07692308,1384.615385,84.92307692,2,green,19,mortality_percent,time_h,4,Common purslane
+50,22.94117647,1376.470588,77.84615385,2,green,19,mortality_percent,time_h,4,Common purslane
+50,22.94117647,1376.470588,73.84615385,2,green,19,mortality_percent,time_h,4,Common purslane
+50,29.18552036,1751.131222,78.46153846,2,green,19,mortality_percent,time_h,4,Common purslane
+50,29.04977376,1742.986426,89.23076923,2,green,19,mortality_percent,time_h,4,Common purslane
+50,28.91402715,1734.841629,100,2,green,19,mortality_percent,time_h,4,Common purslane
+50,55.92760181,3355.656109,99.69230769,2,green,19,mortality_percent,time_h,4,Common purslane
+50,56.06334842,3363.800905,89.84615385,2,green,19,mortality_percent,time_h,4,Common purslane
+50,56.06334842,3363.800905,85.53846154,2,green,19,mortality_percent,time_h,4,Common purslane
+50,55.92760181,3355.656109,79.38461538,2,green,19,mortality_percent,time_h,4,Common purslane
+50,56.75675676,3405.405406,7.692307692,2,green,19,mortality_percent,time_h,6,Tumble pigweed
+50,72.07207207,4324.324324,7.076923077,2,green,19,mortality_percent,time_h,6,Tumble pigweed
+50,55.85585586,3351.351352,16.92307692,2,green,19,mortality_percent,time_h,6,Tumble pigweed
+50,56.75675676,3405.405406,26.15384615,2,green,19,mortality_percent,time_h,6,Tumble pigweed
+50,56.75675676,3405.405406,35.07692308,2,green,19,mortality_percent,time_h,6,Tumble pigweed
+50,72.07207207,4324.324324,27.38461538,2,green,19,mortality_percent,time_h,6,Tumble pigweed
+50,72.07207207,4324.324324,20.30769231,2,green,19,mortality_percent,time_h,6,Tumble pigweed
+50,70.27027027,4216.216216,17.53846154,2,green,19,mortality_percent,time_h,6,Tumble pigweed
+50,74.77477477,4486.486486,17.53846154,2,green,19,mortality_percent,time_h,6,Tumble pigweed
+50,85.58558559,5135.135135,24.61538462,2,green,19,mortality_percent,time_h,6,Tumble pigweed
+50,71.17117117,4270.27027,33.23076923,2,green,19,mortality_percent,time_h,6,Tumble pigweed
+50,71.17117117,4270.27027,34.46153846,2,green,19,mortality_percent,time_h,6,Tumble pigweed
+50,75.67567568,4540.540541,35.07692308,2,green,19,mortality_percent,time_h,6,Tumble pigweed
+50,90.99099099,5459.459459,33.53846154,2,green,19,mortality_percent,time_h,6,Tumble pigweed
+50,90.09009009,5405.405405,38.15384615,2,green,19,mortality_percent,time_h,6,Tumble pigweed
+50,89.18918919,5351.351351,42.46153846,2,green,19,mortality_percent,time_h,6,Tumble pigweed
+50,84.68468468,5081.081081,44,2,green,19,mortality_percent,time_h,6,Tumble pigweed
+50,76.57657658,4594.594595,44.30769231,2,green,19,mortality_percent,time_h,6,Tumble pigweed
+50,72.07207207,4324.324324,44.92307692,2,green,19,mortality_percent,time_h,6,Tumble pigweed
+50,83.78378378,5027.027027,48.92307692,2,green,19,mortality_percent,time_h,6,Tumble pigweed
+50,84.68468468,5081.081081,53.23076923,2,green,19,mortality_percent,time_h,6,Tumble pigweed
+50,71.17117117,4270.27027,52.92307692,2,green,19,mortality_percent,time_h,6,Tumble pigweed
+50,71.17117117,4270.27027,57.23076923,2,green,19,mortality_percent,time_h,6,Tumble pigweed
+50,71.17117117,4270.27027,57.84615385,2,green,19,mortality_percent,time_h,6,Tumble pigweed
+50,85.58558559,5135.135135,60.61538462,2,green,19,mortality_percent,time_h,6,Tumble pigweed
+50,71.17117117,4270.27027,71.07692308,2,green,19,mortality_percent,time_h,6,Tumble pigweed
+50,71.17117117,4270.27027,72.61538462,2,green,19,mortality_percent,time_h,6,Tumble pigweed
+50,92.79279279,5567.567567,69.23076923,2,green,19,mortality_percent,time_h,6,Tumble pigweed
+50,92.79279279,5567.567567,69.53846154,2,green,19,mortality_percent,time_h,6,Tumble pigweed
+50,88.28828829,5297.297297,70.46153846,2,green,19,mortality_percent,time_h,6,Tumble pigweed
+50,83.78378378,5027.027027,71.38461538,2,green,19,mortality_percent,time_h,6,Tumble pigweed
+50,83.78378378,5027.027027,72,2,green,19,mortality_percent,time_h,6,Tumble pigweed
+50,92.79279279,5567.567567,77.53846154,2,green,19,mortality_percent,time_h,6,Tumble pigweed
+50,92.79279279,5567.567567,80,2,green,19,mortality_percent,time_h,6,Tumble pigweed
+50,89.18918919,5351.351351,80,2,green,19,mortality_percent,time_h,6,Tumble pigweed
+50,94.59459459,5675.675675,88.30769231,2,green,19,mortality_percent,time_h,6,Tumble pigweed
+50,93.69369369,5621.621621,89.23076923,2,green,19,mortality_percent,time_h,6,Tumble pigweed
+50,88.28828829,5297.297297,89.53846154,2,green,19,mortality_percent,time_h,6,Tumble pigweed
+50,88.28828829,5297.297297,91.69230769,2,green,19,mortality_percent,time_h,6,Tumble pigweed
+50,83.78378378,5027.027027,100,2,green,19,mortality_percent,time_h,6,Tumble pigweed
+50,88.28828829,5297.297297,100,2,green,19,mortality_percent,time_h,6,Tumble pigweed
+50,86.48648649,5189.189189,100,2,green,19,mortality_percent,time_h,6,Tumble pigweed
+50,90.99099099,5459.459459,99.69230769,2,green,19,mortality_percent,time_h,6,Tumble pigweed
+50,112.6126126,6756.756756,99.69230769,2,green,19,mortality_percent,time_h,6,Tumble pigweed
+,,,,,,,,,,
+,,,,,,,,,,
+,,,,,,,,,,
+,,,,,,,,,,
+,,,,,,,,,,
+,,,,,,,,,,
+,,,,,,,,,,
+,,,,,,,,,,
+,,,,,,,,,,
+,,,,,,,,,,
+,,,,,,,,,,
+,,,,,,,,,,
+,,,,,,,,,,
+,,,,,,,,,,
+,,,,,,,,,,
+,,,,,,,,,,
+,,,,,,,,,,
+,,,,,,,,,,
+,,,,,,,,,,
+,,,,,,,,,,
+,,,,,,,,,,
+,,,,,,,,,,
+,,,,,,,,,,
+,,,,,,,,,,
+,,,,,,,,,,
+,,,,,,,,,,
+,,,,,,,,,,
+,,,,,,,,,,
+,,,,,,,,,,
+,,,,,,,,,,
+,,,,,,,,,,
+,,,,,,,,,,
+,,,,,,,,,,
+,,,,,,,,,,
+,,,,,,,,,,
+,,,,,,,,,,
+,,,,,,,,,,
+,,,,,,,,,,
+,,,,,,,,,,
+,,,,,,,,,,
+,,,,,,,,,,
+,,,,,,,,,,
+,,,,,,,,,,
+,,,,,,,,,,
+,,,,,,,,,,
+,,,,,,,,,,
+,,,,,,,,,,
+,,,,,,,,,,
+,,,,,,,,,,
+,,,,,,,,,,
+,,,,,,,,,,
+,,,,,,,,,,
+,,,,,,,,,,
+,,,,,,,,,,
+,,,,,,,,,,
+,,,,,,,,,,
+,,,,,,,,,,
